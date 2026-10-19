@@ -854,7 +854,7 @@ body.printing-all #allled,body.printing-all #allm{break-before:page}
 <div id="pg2" hidden>
 <div class="ptitle noprint"><span class="pti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M6 20v-7M11 20V5M16 20v-10"/></svg></span><b>収量管理</b><button type="button" class="ib" id="ppr2" onclick="window.print()" aria-label="印刷" title="印刷"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg></button></div>
  <div class="stabs noprint" id="ytags"></div>
- <div class="hint" id="yhint">畝ごとの予想数量は、1aあたりの収量を畝の面積（区画の面積÷畝数）に合わせて計算します。秀品率・販売率・単価も、設定から自動で入ります。黄色の欄の実績数量だけ、ここで入力します。売上予測＝（実績数量。なければ予想数量）×秀品率×販売率×単価。</div>
+ <div class="hint" id="yhint">畝ごとの予想数量は、1aあたりの収量を畝の面積（区画の面積÷畝数）に合わせて計算します。秀品率・販売率・単価も、設定から自動で入ります。黄色の欄の実績数量だけ、ここで入力します。売上予測＝（実績数量。なければ予想数量）×秀品率×販売率×単価×（1−販売手数料）。販売手数料は、設定の収量で入れます。</div>
  <div id="ysum" class="ysum"></div>
  <h3 class="yh">農作物集計</h3>
  <div class="wrap"><table id="yg" class="yt"></table></div>
@@ -1086,7 +1086,9 @@ const Y3={"水稲":[50.3,"農林水産省 近畿農政局『令和5年産水稲�
 function seedY3(l){if(l.yv3)return l;l.yields=l.yields||{};l.ysrc=l.ysrc||{};Object.keys(Y3).forEach(c=>{if(l.yields[c]==null){l.yields[c]=Y3[c][0];l.ysrc[c]=Y3[c][1]}});l.yv3=1;return l}
 const Y2={"オクラ":[137,"農林水産省『令和2年産地域特産野菜生産状況調査』・全国平均 10aあたり1,370kg（農畜産業振興機構 ベジ探）"],"ズッキーニ":[166,"農林水産省『地域特産野菜生産状況調査』令和4年・全国 作付637ha・収穫量10,600tから計算（10aあたり約1,660kg）"]};
 function seedMat(l){if(l.matv1)return l;Object.keys(l.ferts||{}).forEach(c=>(l.ferts[c]||[]).forEach(f=>["base","top"].forEach(k=>(f[k]||[]).forEach(r=>{if(r&&String(r[0]).trim()=="化成肥料")r[0]="化成肥料14-10-13"}))));l.matv1=1;return l}
-function seedY2(l){return seedMat(seedY3(seedY2a(l)))}
+const RP0={"キャベツ":[194,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"はくさい":[228,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"ねぎ":[778,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"レタス":[490,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"ブロッコリー":[695,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"さつまいも":[635,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"じゃがいも":[426,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"さといも":[875,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"だいこん":[204,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"にんじん":[451,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"ごぼう":[894,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"たまねぎ":[347,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"かぼちゃ":[563,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"きゅうり":[670,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"なす":[705,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"トマト":[766,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"ピーマン":[1072,0,"2022〜2024年の年平均（各年12か月）を平均した値（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"シイタケ":[1715,0,"2022〜2024年の平均（生しいたけ）。各年12か月（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"温州みかん":[746,0,"2022〜2024年の平均。みかんは1〜3月・9〜12月のみ調査されるため、販売期間の平均です（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"ぶどう（種なし栽培）":[2006,0,"2022〜2024年の平均。デラウェア（種なしの目安）の6〜9月の平均。品種で価格が大きく違います（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"かき":[664,0,"2022〜2024年の平均。10〜12月（旬）のみ調査されるため、旬の平均です（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"すいか":[519,0,"2022〜2024年の平均。5〜8月（旬）のみ調査されるため、旬の平均です（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"いちご":[2233,0,"2022〜2024年の平均。調査は1〜5月・12月の6か月で、販売期間の平均です（総務省の小売物価統計調査・全国平均、円/kg。日本の物価サイト経由）"],"うめ":[1370,1,"推定：卸単価911円×1.5（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"えだまめ":[1440,1,"推定：卸単価962円×1.5（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"さやいんげん":[1520,1,"推定：卸単価1011円×1.5（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"しゅんぎく":[1560,1,"推定：卸単価1039円×1.5（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"そらまめ（未成熟）":[1550,1,"推定：卸単価773円×2.0（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"エンドウ":[2240,1,"推定：卸単価1494円×1.5（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"オクラ":[1460,1,"推定：卸単価973円×1.5（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"アスパラガス":[2330,1,"推定：卸単価1555円×1.5（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"ニンニク":[1800,1,"推定：卸単価899円×2.0（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"にら":[1570,1,"推定：卸単価783円×2.0（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"ほうれんそう":[1070,1,"推定：卸単価535円×2.0（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"こまつな":[750,1,"推定：卸単価325円×2.3（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"チンゲンサイ":[860,1,"推定：卸単価372円×2.3（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"ミズナ":[820,1,"推定：卸単価408円×2.0（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"祝蕾":[850,1,"推定：卸単価423円×2.0（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"菜ばな":[1000,1,"推定：卸単価501円×2.0（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"ミニトマト":[1610,1,"推定：卸単価804円×2.0（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"かぶ":[390,1,"推定：卸単価168円×2.3（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"とうもろこし":[810,1,"推定：卸単価403円×2.0（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"],"びわ":[2920,1,"推定：卸単価1947円×1.5（小売物価統計で、小売÷卸が卸単価の高さにより約1.5〜2.9倍だった実績から設定）。実際の価格で直してください"]};
+function seedRP(l){if(l.rpv1)return l;l.rp=l.rp||{};Object.keys(RP0).forEach(c=>{if(l.rp[c]==null)l.rp[c]={p:RP0[c][0],e:RP0[c][1],s:RP0[c][2]}});l.rpv1=1;return l}
+function seedY2(l){return seedRP(seedMat(seedY3(seedY2a(l))))}
 function seedY2a(l){if(l.yv2)return l;l.yields=l.yields||{};l.ysrc=l.ysrc||{};Object.keys(Y2).forEach(c=>{if(l.yields[c]==null){l.yields[c]=Y2[c][0];l.ysrc[c]=Y2[c][1]}});l.yv2=1;return l}
 function migrate(d){
  if(d&&d.v>=5){const n=fresh();if(d.lists)delete d.lists.rpa;d.lists=seedY2(seedYP(seedPest(seedN2(seedN(seedV(seedF(seedY(d.lists||n.lists))))))));d.marks=unpackMarks(d.marks||{});d.hist=d.hist||[];d.prices=d.prices||{};d.misc=d.misc||defMisc();seedP(d);d.mach=d.mach||[];seedM(d);seedPlan(d);seedGeo(d);d.fields=d.fields||n.fields;
@@ -1443,7 +1445,7 @@ let h=`<div class="bar" style="margin-top:0"><button data-nav="-1">◀ 前の作
  const cm=((S.lists.cultm||{})[c])||[],ci=(v,k,i)=>`<input class="cmi" data-s="cm" data-ci="${i}" data-ck="${k}" value="${esc(v||"-")}">`;
  const cmrows=cm.length||cu.length?cm:[{n:"-",s:"-",t:"-",h:"-"}];
  const cyv=S.lists.cy||{},cyin=(n,k,w,ph)=>{const o=cyv[c+"|"+n]||{},v=o[k];return `<input class="cmi" type="number" min="0" step="any" data-s="cy" data-cn="${esc(n)}" data-ck="${k}" style="width:${w}px" value="${v===""||v==null?"":v}" placeholder="${ph}">`};
- h+=`<div class="sec"><b>栽培・カレンダー情報</b><div class="hint">1aあたり(kg)を入れた栽培は、上の「収量の目安」より優先して収量を計算します。空欄（薄い数字）なら、収量の目安を使います。倍率は卸単価に掛ける係数で、空欄は1.0倍です。ハウスの栽培には初期値が入っています（収量は埼玉県の営農指標。倍率は仮置きなので、販売先の実際の価格で直してください）。</div><div class="ow"><table class="ct"><thead><tr><th>栽培</th><th>播種</th><th>定植</th><th>収穫</th><th>1aあたり(kg)</th><th>倍率（卸単価×）</th><th></th></tr></thead><tbody>${cu.map(([n,sp])=>{const o=specText(sp),d=cultYP(c,n);return `<tr><td>${esc(n)}</td><td>${o.s.join("、")||"-"}</td><td>${o.t.join("、")||"-"}</td><td>${o.h.join("、")||"-"}</td><td>${cyin(n,"y",72,d.dy!=null?d.dy:(ya==null?"":ya))}</td><td>${cyin(n,"p",60,d.dp)}</td><td></td></tr>`}).join("")}${cmrows.map((r,i)=>`<tr><td>${ci(r.n,"n",i)}</td><td>${ci(r.s,"s",i)}</td><td>${ci(r.t,"t",i)}</td><td>${ci(r.h,"h",i)}</td><td></td><td></td><td>${cm.length?`<button class="cmx" data-cmdel="${i}" title="削除">×</button>`:""}</td></tr>`).join("")}</tbody></table></div><div class="bar"><button data-cmadd="1">＋ 栽培を追加</button></div><div class="hint">${cu.length?"資料の栽培カレンダーから読み取った目安（上の行）と、手入力の行（下の行）です。手入力の行は、メモ用で計算には使いません。":"この野菜は資料に栽培カレンダーがないため、必要に応じて手入力してください。"}時期の記載がない所は「-」です。</div></div>`;
+ h+=`<div class="sec"><b>栽培・カレンダー情報</b><div class="hint">1aあたり(kg)を入れた栽培は、上の「収量の目安」より優先して収量を計算します。空欄（薄い数字）なら、収量の目安を使います。倍率は単価に掛ける係数で、空欄は1.0倍です。ハウスの栽培には初期値が入っています（収量は埼玉県の営農指標。倍率は、小売物価統計の2022〜2024年の月別価格から、その栽培の収穫月の平均÷年平均で計算した値です。ほうれんそうは福岡県の月別価格を使いました。販売先の実際の価格で直してください）。</div><div class="ow"><table class="ct"><thead><tr><th>栽培</th><th>播種</th><th>定植</th><th>収穫</th><th>1aあたり(kg)</th><th>倍率（単価×）</th><th></th></tr></thead><tbody>${cu.map(([n,sp])=>{const o=specText(sp),d=cultYP(c,n);return `<tr><td>${esc(n)}</td><td>${o.s.join("、")||"-"}</td><td>${o.t.join("、")||"-"}</td><td>${o.h.join("、")||"-"}</td><td>${cyin(n,"y",72,d.dy!=null?d.dy:(ya==null?"":ya))}</td><td>${cyin(n,"p",60,d.dp)}</td><td></td></tr>`}).join("")}${cmrows.map((r,i)=>`<tr><td>${ci(r.n,"n",i)}</td><td>${ci(r.s,"s",i)}</td><td>${ci(r.t,"t",i)}</td><td>${ci(r.h,"h",i)}</td><td></td><td></td><td>${cm.length?`<button class="cmx" data-cmdel="${i}" title="削除">×</button>`:""}</td></tr>`).join("")}</tbody></table></div><div class="bar"><button data-cmadd="1">＋ 栽培を追加</button></div><div class="hint">${cu.length?"資料の栽培カレンダーから読み取った目安（上の行）と、手入力の行（下の行）です。手入力の行は、メモ用で計算には使いません。":"この野菜は資料に栽培カレンダーがないため、必要に応じて手入力してください。"}時期の記載がない所は「-」です。</div></div>`;
  h+=`<div class="sec"><b>施肥例（元肥・追肥）</b>`+(fe&&fe.length?fe.map((sub,si)=>`<div class="fsub">${fertTable(sub,si)}</div>`).join(""):`<div class="hint">施肥例は未登録です。</div><button data-fnew="1">＋ 施肥例を登録</button>`)+`</div>`;
  const tp=((S.lists.tips||{})[c])||{},TT=tipsOf(c);
  [["pt","栽培のポイント"],["mk","作り方"],["ok","成功のポイント"]].forEach(([k,t])=>{const v=tp[k]!=null?tp[k]:(TT[k]||"");h+=`<div class="sec"><b>${t}</b><textarea class="tipta" data-s="tip" data-tk="${k}" rows="${Math.min(14,Math.max(3,(v.match(/\n/g)||[]).length+2+Math.floor(v.length/60)))}" placeholder="未登録（手入力できます）">${esc(v)}</textarea></div>`});
@@ -1533,11 +1535,11 @@ function workerSec(){
  ${S.workers.map((w,i)=>`<tr><td>作業員${i+1}</td><td><input data-s="wk" data-wi="${i}" style="width:200px;text-align:left" value="${esc(w)}"></td><td><button type="button" data-wdel="${i}">削除</button></td></tr>`).join("")}</tbody></table>
  <div class="bar"><button type="button" id="wnew">＋ 作業員を追加</button></div>`}
 function yieldSection(){const all=S.lists.crops.flatMap(g=>g[1]);
- return `<div class="yset"><h3>秀品率・販売率・卸単価</h3>
- <div class="bar">秀品率の一律の値 <input data-s="shu" type="number" min="1" max="100" step="any" value="${S.shuhin||80}" style="width:64px"> %　販売率の一律の値 <input data-s="han" type="number" min="1" max="100" step="any" value="${S.hanbai>0?S.hanbai:100}" style="width:64px"> %</div>
+ return `<div class="yset"><h3>秀品率・販売率・販売手数料・単価</h3>
+ <div class="bar">秀品率の一律の値 <input data-s="shu" type="number" min="1" max="100" step="any" value="${S.shuhin||80}" style="width:64px"> %　販売率の一律の値 <input data-s="han" type="number" min="1" max="100" step="any" value="${S.hanbai>0?S.hanbai:100}" style="width:64px"> %　販売手数料の一律の値 <input data-s="fee" type="number" min="0" max="99" step="any" value="${feeRate()}" style="width:64px"> %</div>
  <div class="hint" style="max-width:760px;line-height:1.6">秀品率は収穫量のうち販売できる品質の割合、販売率は秀品のうち実際に販売する割合です。空欄の作物は、上の一律の値になります。うす緑の欄は他の設定から自動で入る欄（見るだけ）、黄色の欄は入力する欄です。収量の目安は、栽培計画設定の農作物リストで入力します（ここでは見るだけです）。</div>
- <div class="hint" style="max-width:760px;line-height:1.6"><b>卸単価</b>は、農水省などの卸売価格を基にした1kgあたりの概算です（年間平均、または旬の4時点の平均。うめ・びわなどは旬の時期のみの価格で、通年平均より高めです）。備考に、根拠の資料を書いています。直売や契約出荷の価格は、収支計画設定の「販路と卸単価の倍率」と、設定の農作物の「栽培ごとの倍率」で反映します。根拠の資料がない農作物は、空欄です。</div>
- <div class="ow"><table class="ft"><thead><tr><th>作物</th><th>1aあたり(kg)</th><th>秀品率(%)</th><th>販売率(%)</th><th>卸単価(円/kg)</th><th>備考（卸単価の根拠）</th></tr></thead><tbody>${all.map(c=>{const a=(S.lists.yields||{})[c],rt=(S.lists.rate||{})[c],hr=(S.lists.hrate||{})[c],pr=(S.lists.price||{})[c],nt=(S.lists.pnote||{})[c]||"";return `<tr><td>${esc(c)}</td><td class="n lk">${a==null?"－":a}</td><td class="in"><input type="number" min="1" max="100" step="any" data-s="yr" data-yc="${esc(c)}" value="${rt>0?rt:""}" placeholder="${S.shuhin||80}" style="width:64px"></td><td class="in"><input type="number" min="1" max="100" step="any" data-s="hr" data-yc="${esc(c)}" value="${hr>0?hr:""}" placeholder="${S.hanbai>0?S.hanbai:100}" style="width:64px"></td><td class="in"><input type="number" min="0" step="any" data-s="yp" data-yc="${esc(c)}" value="${pr>0?pr:""}" style="width:80px"></td><td class="in"><input type="text" data-s="yn" data-yc="${esc(c)}" value="${esc(nt)}" placeholder="根拠（資料名・年）" style="width:340px;text-align:left"></td></tr>`}).join("")}</tbody></table></div></div>`}
+ <div class="hint" style="max-width:760px;line-height:1.6"><b>単価</b>は、総務省の小売物価統計調査（全国のスーパー等の1kgあたり価格）の、2022〜2024年の年平均を平均した値です（果物は販売期間のみの平均）。調査にない農作物は「推定」と書いて、卸売価格に、小売÷卸の実績の比（約1.5〜2.9倍）をかけた値を入れています。売上予測は、<b>単価 × （1 − 販売手数料） × 栽培ごとの倍率</b>で、手取りを計算します（直売所の手数料の目安は1〜2割）。単価が空欄の農作物（水稲・花きなど）は、右の<b>卸売価格</b>に、収支計画設定の「販路の倍率」と、栽培ごとの倍率をかけて計算します。卸売価格は、農水省などの卸売価格を基にした1kgあたりの概算です（年間平均、または旬の4時点の平均）。備考に、根拠の資料を書いています。根拠の資料がない農作物は、空欄です。</div>
+ <div class="ow"><table class="ft"><thead><tr><th>作物</th><th>1aあたり(kg)</th><th>秀品率(%)</th><th>販売率(%)</th><th>単価(円/kg)</th><th>備考（単価の根拠）</th><th>卸売価格(円/kg)</th><th>備考（卸売価格の根拠）</th></tr></thead><tbody>${all.map(c=>{const a=(S.lists.yields||{})[c],rt=(S.lists.rate||{})[c],hr=(S.lists.hrate||{})[c],pr=(S.lists.price||{})[c],nt=(S.lists.pnote||{})[c]||"",rpo=(S.lists.rp||{})[c];return `<tr><td>${esc(c)}</td><td class="n lk">${a==null?"－":a}</td><td class="in"><input type="number" min="1" max="100" step="any" data-s="yr" data-yc="${esc(c)}" value="${rt>0?rt:""}" placeholder="${S.shuhin||80}" style="width:64px"></td><td class="in"><input type="number" min="1" max="100" step="any" data-s="hr" data-yc="${esc(c)}" value="${hr>0?hr:""}" placeholder="${S.hanbai>0?S.hanbai:100}" style="width:64px"></td><td class="in"><input type="number" min="0" step="any" data-s="rp" data-yc="${esc(c)}" value="${rpo&&rpo.p>0?rpo.p:""}" style="width:80px">${rpo&&rpo.e?'<small style="opacity:.7"> 推定</small>':""}</td><td class="in"><input type="text" data-s="rs" data-yc="${esc(c)}" value="${esc(rpo&&rpo.s||"")}" placeholder="根拠（資料名・年）" style="width:340px;text-align:left"></td><td class="in"><input type="number" min="0" step="any" data-s="yp" data-yc="${esc(c)}" value="${pr>0?pr:""}" style="width:80px"></td><td class="in"><input type="text" data-s="yn" data-yc="${esc(c)}" value="${esc(nt)}" placeholder="根拠（資料名・年）" style="width:340px;text-align:left"></td></tr>`}).join("")}</tbody></table></div></div>`}
 function agmSection(){
  const A=S.agm||[];if(MEOPEN.agb0==null)MEOPEN.agb0=1;
  const I=(r,f,w,ph,num)=>`<input data-s="agm" data-ai="${esc(r.id)}" data-af="${f}" ${num?'inputmode="decimal" style="width:'+w+'px"':'style="width:'+w+'px;text-align:left"'} value="${r[f]==null?"":esc(r[f])}"${ph?' placeholder="'+ph+'"':""}>`;
@@ -1555,7 +1557,7 @@ const BM0=()=>({inc:[["就農支援の資金（経営開始資金・就農準備
  exp:[["借入金の利息（年額）"],["農業共済・収入保険の掛金"],["固定資産税などの租税公課（農地・建物）"],["研修・講習・組合費（JA・団体など）"],["その他の経費"]].map(([n])=>({n,amt:"",note:""})),
  sen:[["配偶者"],["その他の家族"]].map(([n])=>({n,amt:"",note:""})),
  loan:[{n:"日本政策金融公庫（青年等就農資金など）",pr:"",int:"",note:""}],rent:""});
-function bmGet(){if(!S.bm)S.bm=BM0();const B=S.bm;B.inc=B.inc||[];B.exp=B.exp||[];B.sen=B.sen||[];B.loan=B.loan||[];if(!B.x3){B.x3=1;if(!B.exp.some(r=>/販売手数料/.test(r.n||"")))B.exp.unshift({n:"販売手数料（直売所・JA・市場）",amt:"",note:"売上の1割前後のことが多い。出荷先ごとの料率を確認して、年間の金額を入力"})}if(!B.x5){B.x5=1;B.loan=B.loan.filter(r=>+r.pr>0||+r.int>0);B.exp=B.exp.filter(r=>!(/借入金の利息/.test(r.n||"")&&!(+r.amt>0)))}return B}
+function bmGet(){if(!S.bm)S.bm=BM0();const B=S.bm;B.inc=B.inc||[];B.exp=B.exp||[];B.sen=B.sen||[];B.loan=B.loan||[];if(!B.x3){B.x3=1;if(!B.exp.some(r=>/販売手数料/.test(r.n||"")))B.exp.unshift({n:"販売手数料（直売所・JA・市場）",amt:"",note:"売上の1割前後のことが多い。出荷先ごとの料率を確認して、年間の金額を入力"})}if(!B.x6){B.x6=1;B.exp.forEach(r=>{if(/販売手数料/.test(r.n||"")&&/売上の1割前後/.test(r.note||""))r.note="収量管理の売上予測は、単価のある農作物では販売手数料を引いた手取りです。ここには入れず、手数料を引かない出荷分だけ入力してください"})}if(!B.x5){B.x5=1;B.loan=B.loan.filter(r=>+r.pr>0||+r.int>0);B.exp=B.exp.filter(r=>!(/借入金の利息/.test(r.n||"")&&!(+r.amt>0)))}return B}
 const incAct=(r,yy)=>!((+r.y1>0&&yy<+r.y1)||(+r.y2>0&&yy>+r.y2));
 const incSum=yy=>(bmGet().inc||[]).reduce((t,r)=>t+(+r.amt>0&&incAct(r,yy)?+r.amt:0),0);
 const bmSum=(L,k)=>(L||[]).reduce((t,r)=>t+(+r[k]>0?+r[k]:0),0);
@@ -1572,9 +1574,9 @@ function bmParts(){const B=bmGet(),C=bmCalc(),y=v=>fmtYen(v)||"0円";
  <div class="bar">年間の地代（合計） <input class="yin" type="number" min="0" step="any" style="width:130px" data-s="bm" data-bl="rent" data-bf="rent" value="${B.rent===""||B.rent==null?"":B.rent}"> 円/年</div>`}}
 
 function chanHtml(){const C=chanGet(),m=chMult(),sh=C.rows.reduce((t,r)=>t+(+r.share>0?+r.share:0),0);
- return `<div class="hint" style="max-width:760px;line-height:1.6">作物の単価は、卸売価格を基にした「卸単価」です。直売や契約出荷の割合と、卸単価に対する倍率を入れると、売上予測に反映します。倍率は仮置きの値なので、販売先の実際の価格で直してください。割合の合計が100%でなくても、割合で重みをつけた平均で計算します。空欄・0%の販路は使いません。</div>
- <div class="ow"><table class="yt pf"><thead><tr><th>販路</th><th class="n">割合(%)</th><th class="n">卸単価に対する倍率</th></tr></thead><tbody>${C.rows.map((r,i)=>`<tr><td><input style="width:150px;text-align:left" data-ch="${i}.n" value="${esc(r.n)}"></td><td class="n"><input class="yin" type="number" min="0" step="any" style="width:70px" data-ch="${i}.share" value="${r.share===""||r.share==null?"":r.share}"></td><td class="n"><input class="yin" type="number" min="0" step="any" style="width:70px" data-ch="${i}.mult" value="${r.mult===""||r.mult==null?"":r.mult}"></td></tr>`).join("")}</tbody></table></div>
- <div class="hint">全体の平均倍率：<b>${m.toFixed(2)}</b>倍${sh>0&&Math.abs(sh-100)>0.01?"（割合の合計 "+sh+"%）":""}。作型ごとの倍率（設定の農作物）にこの倍率を掛けて、売上予測の単価にします。</div>`}
+ return `<div class="hint" style="max-width:760px;line-height:1.6">この表は、単価（設定の収量）が空欄の農作物にだけ使います。その農作物は、卸売価格に、直売や契約出荷の割合と倍率を反映して売上予測を計算します。単価がある農作物は、販売手数料（設定の収量）で計算するので、この表は使いません。倍率は仮置きの値なので、販売先の実際の価格で直してください。割合の合計が100%でなくても、割合で重みをつけた平均で計算します。空欄・0%の販路は使いません。</div>
+ <div class="ow"><table class="yt pf"><thead><tr><th>販路</th><th class="n">割合(%)</th><th class="n">卸売価格に対する倍率</th></tr></thead><tbody>${C.rows.map((r,i)=>`<tr><td><input style="width:150px;text-align:left" data-ch="${i}.n" value="${esc(r.n)}"></td><td class="n"><input class="yin" type="number" min="0" step="any" style="width:70px" data-ch="${i}.share" value="${r.share===""||r.share==null?"":r.share}"></td><td class="n"><input class="yin" type="number" min="0" step="any" style="width:70px" data-ch="${i}.mult" value="${r.mult===""||r.mult==null?"":r.mult}"></td></tr>`).join("")}</tbody></table></div>
+ <div class="hint">全体の平均倍率：<b>${m.toFixed(2)}</b>倍${sh>0&&Math.abs(sh-100)>0.01?"（割合の合計 "+sh+"%）":""}。栽培ごとの倍率（設定の農作物）にこの倍率を掛けて、売上予測の単価にします。</div>`}
 function parSection(){const PR=S.planPar,nh=PR.nh,P=S.plan,M=bmParts(),{E,A}=planEff(),y=v=>fmtYen(v)||"0円",
  pr=(path,v,w)=>`<input class="yin" type="number" step="any" style="width:${w||80}px" data-pq="${path}" value="${v}">`,
  inp=(k,w,ph)=>`<input class="yin" type="number" step="any" style="width:${w}px" data-pp="${k}" value="${P[k]==null?"":esc(P[k])}"${ph?` placeholder="${ph}"`:""}>`,
@@ -1607,7 +1609,7 @@ function parSection(){const PR=S.planPar,nh=PR.nh,P=S.plan,M=bmParts(),{E,A}=pla
  <div class="bar">国保の軽減判定：5割 ${pr("rel5",PR.rel5,80)} 円×人数　2割 ${pr("rel2",PR.rel2,80)} 円×人数（令和7年度の基準。令和8年度は変わっている場合があります）</div>
  <div class="bar"><button type="button" id="plreset">収支計画の入力を初期値に戻す</button><span class="hint" style="margin:0 0 0 8px">税・控除・料率の入力を、初期値に戻します（借入・経費などのマスタは変わりません）</span></div>`;
  return hint("お金と税に関する入力を、ここに集めています。個人・家族・圃場の情報は、マイページで入れます。<b>種苗・農薬・資材・光熱・荷造運賃・雇用労賃などは、設備投資の「コスト項目リスト」で入れるので、経費マスタには入れません</b>（二重に数えるため）。金額は1年分です。")
- +acc("b1","収入",spouse+M.inc)+acc("b6","販路と卸単価の倍率",chanHtml())+acc("b2","経費・支出",M.sen+M.exp+M.rent)+acc("b3","借入・資金計画",fdFundHtml())+acc("b4","事業主・税・保険・控除",tax)+acc("b5","不作年と豊作年の変化率",goal)+acc("b7","計算の前提（国保・住民税・年金の料率）",par)}
+ +acc("b1","収入",spouse+M.inc)+acc("b6","販路の倍率",chanHtml())+acc("b2","経費・支出",M.sen+M.exp+M.rent)+acc("b3","借入・資金計画",fdFundHtml())+acc("b4","事業主・税・保険・控除",tax)+acc("b5","不作年と豊作年の変化率",goal)+acc("b7","計算の前提（国保・住民税・年金の料率）",par)}
 function secCrop(){
  return `<h3>農作物リスト</h3><div class="hint">作物を選ぶと、品種・栽培カレンダー・収量・施肥例が出ます。</div>
  <div class="mm"><div class="ml">${S.lists.crops.map(([g,l])=>`<div class="gh">${esc(g)}</div>`+l.map(c=>`<button class="ci${c==SC?" on":""}" data-pick="${esc(c)}">${esc(c)}</button>`).join("")).join("")}</div><div class="mr">${SC?cropPane(SC):""}</div></div>
@@ -1703,6 +1705,9 @@ $("set").onchange=async e=>{const t=e.target,s=t.dataset.s,f=S.fields[SF];
  else if(s=="cy"){const Cy=S.lists.cy=S.lists.cy||{},k=SY+"|"+t.dataset.cn,o=Cy[k]=Cy[k]||{y:"",p:""},v=t.value===""?"":parseFloat(t.value),ck=t.dataset.ck;o[ck]=(v===""||isNaN(v)||v<0||(ck=="p"&&v==0))?"":v;if(o.y===""&&o.p==="")delete Cy[k];save();return}
  else if(s=="yp"){const P=S.lists.price=S.lists.price||{},v=parseFloat(t.value);if(v>0)P[t.dataset.yc]=v;else delete P[t.dataset.yc];save();return}
  else if(s=="yn"){const N=S.lists.pnote=S.lists.pnote||{};if(t.value.trim())N[t.dataset.yc]=t.value.trim();else delete N[t.dataset.yc];save();return}
+ else if(s=="fee"){const v=parseFloat(t.value);S.fee=v>=0&&v<100?v:20;save();return}
+ else if(s=="rp"){const R=S.lists.rp=S.lists.rp||{},v=parseFloat(t.dataset.yc&&t.value);if(v>0)R[t.dataset.yc]={p:v,e:0,s:"自分で入力"};else delete R[t.dataset.yc];save();return}
+ else if(s=="rs"){const R=S.lists.rp=S.lists.rp||{},o=R[t.dataset.yc];if(o){o.s=t.value;save()}return}
  else if(s=="han"){const v=parseFloat(t.value);S.hanbai=v>0&&v<=100?v:100;save();return}
  else if(s=="hr"){const R=S.lists.hrate=S.lists.hrate||{},v=parseFloat(t.value);if(v>0&&v<=100)R[t.dataset.yc]=v;else delete R[t.dataset.yc];save();return}
  else if(s=="shu"){const v=parseFloat(t.value);S.shuhin=v>0&&v<=100?v:80;save();return}
@@ -1729,15 +1734,15 @@ V.tab=1;V.yf=-1;
 const fmtKg=n=>n==null||isNaN(n)?"":(Math.round(n*10)/10).toLocaleString("en-US",{minimumFractionDigits:1,maximumFractionDigits:1}),fmtYen=n=>n==null?"":Math.round(n).toLocaleString()+"円";
 const fmtD=d=>(+d.slice(5,7))+"/"+(+d.slice(8));
 
-/* ===== ハウス作型（作型名, 時期, 収量kg/10a, 卸単価に対する倍率の初期値） ===== */
+/* ===== ハウス作型（作型名, 時期, 収量kg/10a, 単価に対する倍率の初期値） ===== */
 const CULTH={
-"きゅうり":[["促成栽培（ハウス）","s8-8.5 t9-9.5 h10-12 h0-5.5",16000,1.4],["半促成栽培（ハウス・加温）","s1 t2 h3-5.5",13000,1.2],["半促成栽培（ハウス・無加温）","s1.5 t2.5 h3.5-5.5",10000,1.15],["抑制栽培（ハウス）","s6.5 t7.3 h8-10",5000,1.1]],
-"トマト":[["促成栽培（ハウス）","s7.8 t8.8 h11-12 h0-5.5",15000,1.2],["長期越冬栽培（ハウス・養液土耕）","s8.5 t10 h11.5-12 h0-6.5",30000,1.15]],
-"ミニトマト":[["長期越冬栽培（ハウス）","s8.5 t10 h11.5-12 h0-6.5",10000,1.1]],
-"なす":[["半促成栽培（ハウス）","s9.5 t1.5 h3-6.5",7000,1.2]],
-"ピーマン":[["促成栽培（ハウス）","s8.5 t9.5 h11-12 h0-6",null,1.2]],
+"きゅうり":[["促成栽培（ハウス）","s8-8.5 t9-9.5 h10-12 h0-5.5",16000,1.03],["半促成栽培（ハウス・加温）","s1 t2 h3-5.5",13000,0.86],["半促成栽培（ハウス・無加温）","s1.5 t2.5 h3.5-5.5",10000,0.85],["抑制栽培（ハウス）","s6.5 t7.3 h8-10",5000,1.08]],
+"トマト":[["促成栽培（ハウス）","s7.8 t8.8 h11-12 h0-5.5",15000,0.92],["長期越冬栽培（ハウス・養液土耕）","s8.5 t10 h11.5-12 h0-6.5",30000,0.89]],
+"ミニトマト":[["長期越冬栽培（ハウス）","s8.5 t10 h11.5-12 h0-6.5",10000,0.89]],
+"なす":[["半促成栽培（ハウス）","s9.5 t1.5 h3-6.5",7000,0.94]],
+"ピーマン":[["促成栽培（ハウス）","s8.5 t9.5 h11-12 h0-6",null,1.02]],
 "いちご":[["促成栽培（ハウス）","t8.5-9 h10.7-12 h0-5",4000,1]],
-"ほうれんそう":[["雨よけ栽培（夏まき・ハウス）","s5.5-7 h6.5-8.5",1000,1.2]]};
+"ほうれんそう":[["雨よけ栽培（夏まき・ハウス）","s5.5-7 h6.5-8.5",1000,1.4]]};
 const allCult=c=>(CULT[c]||[]).concat((CULTH[c]||[]).map(x=>[x[0],x[1]]));
 function cultOpts(crop,g){const f=S.fields[g],hs=(CULTH[crop]||[]).map(x=>[x[0],x[1]]),op=CULT[crop]||[];return f&&f.house?(hs.length?hs:op):(op.length?op:hs)}
 function cultYP(crop,cult){const o=((S.lists.cy||{})[crop+"|"+cult])||{},d=cult?(CULTH[crop]||[]).find(x=>x[0]==cult):null,
@@ -1749,24 +1754,26 @@ function chMult(){const R=S.chan&&S.chan.rows;if(!Array.isArray(R))return 1;let 
 function cropHRate(c){const r=(S.lists.hrate||{})[c];return r>0?r:(S.hanbai>0?S.hanbai:100)}
 function cropRate(c){const r=(S.lists.rate||{})[c];return r>0?r:(S.shuhin>0?S.shuhin:80)}
 function cropPrice(c){const v=(S.lists.price||{})[c];return v>0?+v:null}
+function cropRP(c){const o=(S.lists.rp||{})[c];return o&&o.p>0?+o.p:null}
+function feeRate(){const v=parseFloat(S.fee);return v>=0&&v<100?v:20}
 function ridgeM2(g,i){const f=S.fields[g],r=f&&f.ridges[i];if(!r)return 0;const p=plotOf(r),n=ridgesOf(f,p).length,ar=plotArea(f,p);return n>0&&ar>0?ar/n:0}
 function ycalc(s,ra){
  const rec=(s.yd&&s.yd[V.y])||{},cy=cultYP(s.crop,s.cult),a=cy.y!=null?cy.y:(S.lists.yields||{})[s.crop],auto=a==null?null:(ra>0?a*ra/100:a/10),has=v=>v!=null&&v!=="";
- const est=auto,act=has(rec.act)?+rec.act:null,pr=cropPrice(s.crop),pm=cy.p*chMult(),rate=cropRate(s.crop),hr=cropHRate(s.crop),base=act!=null?act:est,sell=base!=null?base*rate/100:null,real=sell!=null?sell*hr/100:null;
- return{rec,auto,est,act,pr,pm,rate,hr,base,sell,real,rev:real!=null&&pr!=null?real*pr*pm:null}}
+ const est=auto,act=has(rec.act)?+rec.act:null,rp=cropRP(s.crop),ret=rp!=null,pr=ret?rp:cropPrice(s.crop),pm=ret?cy.p*(1-feeRate()/100):cy.p*chMult(),rate=cropRate(s.crop),hr=cropHRate(s.crop),base=act!=null?act:est,sell=base!=null?base*rate/100:null,real=sell!=null?sell*hr/100:null;
+ return{rec,auto,est,act,pr,pm,cp:cy.p,ret,rate,hr,base,sell,real,rev:real!=null&&pr!=null?real*pr*pm:null,fee:ret&&real!=null?real*pr*cy.p*feeRate()/100:0}}
 function hspan(key){const M=S.marks[key]||{},ds=Object.keys(M).filter(d=>d.startsWith(String(V.y))&&(M[d]=="h"||M[d]=="H")).sort();return ds.length?fmtD(ds[0])+"〜"+fmtD(ds[ds.length-1]):""}
 function yrecs(){const L=[];
  S.fields.forEach((f,g)=>{if(!f.on)return;if(V.yf>=0&&g!=V.yf)return;f.ridges.forEach((r,i)=>r.slots.forEach((s,k)=>{if(k>=(r.n||2)||!s.crop)return;L.push({g,i,k,f,r,s,key:r.id+"-"+k,c:ycalc(s,ridgeM2(g,i))})}))});
  return L}
 function ysummary(L){
- const sm=fn=>L.reduce((t,x)=>t+(fn(x)||0),0),np=[...new Set(L.filter(x=>x.c.pr==null).map(x=>x.s.crop))],ne=L.filter(x=>x.c.est==null).length;
+ const sm=fn=>L.reduce((t,x)=>t+(fn(x)||0),0),feeSum=sm(x=>x.c.fee),np=[...new Set(L.filter(x=>x.c.pr==null).map(x=>x.s.crop))],ne=L.filter(x=>x.c.est==null).length;
  $("ysum").innerHTML=[["予想数量の合計",fmtKg(sm(x=>x.c.est))+" kg"],["実績数量の合計",fmtKg(sm(x=>x.c.act))+" kg"],["販売収量の合計",fmtKg(sm(x=>x.c.sell))+" kg"],["実売数量の合計",fmtKg(sm(x=>x.c.real))+" kg"],["売上予測の合計",fmtYen(sm(x=>x.c.rev))||"0円"]]
   .map(([a,b],i)=>`<div class="ycard"${i==4?' style="border:2px solid var(--hd)"':""}><small>${a}</small><b>${b}</b></div>`).join("")+
-  (L.length?`<div class="hint" style="align-self:center">${np.length?"卸単価が未設定の農作物（"+np.map(esc).join("、")+"）は、売上に含まれません。":""}${ne?"予想数量が空の"+ne+"件は、栽培計画設定の農作物リストに収量の目安がない野菜です。":""}</div>`:"");
+  (L.length?`<div class="hint" style="align-self:center">${np.length?"単価が未設定の農作物（"+np.map(esc).join("、")+"）は、売上に含まれません。":""}${feeSum>0?"売上予測は、販売手数料"+feeRate()+"%（合計 約"+fmtYen(feeSum)+"）を引いた手取りです。":""}${ne?"予想数量が空の"+ne+"件は、栽培計画設定の農作物リストに収量の目安がない野菜です。":""}</div>`:"");
  const G={},ord=[];
  L.forEach(x=>{const k=x.s.crop,g=G[k]=G[k]||(ord.push(k),{crop:k,real:0,rev:0,any:false});g.real+=x.c.real||0;g.rev+=x.c.rev||0;if(x.c.real!=null)g.any=true});
- let h='<thead><tr><th>農作物</th><th class="n">実売収量(kg)</th><th class="n">卸単価(円/kg)</th><th class="n">売上予測</th></tr></thead><tbody>';
- ord.forEach(k=>{const g=G[k],pr=cropPrice(k);h+=`<tr><td>${esc(g.crop)}</td><td class="n">${g.any?fmtKg(g.real):""}</td><td class="n">${pr==null?"未設定":fmtYen(pr)}</td><td class="n">${g.rev?fmtYen(g.rev):""}</td></tr>`});
+ let h='<thead><tr><th>農作物</th><th class="n">実売収量(kg)</th><th class="n">単価(円/kg)</th><th class="n">売上予測</th></tr></thead><tbody>';
+ ord.forEach(k=>{const g=G[k],rpk=cropRP(k),pr=rpk!=null?rpk:cropPrice(k);h+=`<tr><td>${esc(g.crop)}</td><td class="n">${g.any?fmtKg(g.real):""}</td><td class="n">${pr==null?"未設定":fmtYen(pr)}</td><td class="n">${g.rev?fmtYen(g.rev):""}</td></tr>`});
  if(!ord.length)h+='<tr><td colspan="4" style="opacity:.6">栽培計画で野菜名を選ぶと、ここに集計されます</td></tr>';
  h+=`</tbody><tfoot><tr><td>合計</td><td class="n">${fmtKg(sm(x=>x.c.real))}</td><td></td><td class="n">${fmtYen(sm(x=>x.c.rev))}</td></tr></tfoot>`;
  $("yg").innerHTML=h}
@@ -1774,10 +1781,10 @@ function renderY(){
  if(V.yf>=0&&!(S.fields[V.yf]&&S.fields[V.yf].on))V.yf=-1;
  $("ytags").innerHTML=`<button class="tab${V.yf<0?" on":""}" data-yft="-1">全圃場</button>`+S.fields.map((f,i)=>f.on?`<button class="tab${i==V.yf?" on":""}" data-yft="${i}">${esc(f.name)}</button>`:"").join("");
  const L=yrecs();ysummary(L);
- let h='<thead><tr><th>圃場</th><th>畝名</th><th>季</th><th>野菜名</th><th>品種</th><th>栽培</th><th>収穫時期</th><th class="n">予想数量(kg)</th><th class="n">実績数量(kg)</th><th class="n">秀品率(%)</th><th class="n">販売収量(kg)</th><th class="n">販売率(%)</th><th class="n">実売数量(kg)</th><th class="n">卸単価(円/kg)</th><th class="n">売上予測</th></tr></thead><tbody>';
+ let h='<thead><tr><th>圃場</th><th>畝名</th><th>季</th><th>野菜名</th><th>品種</th><th>栽培</th><th>収穫時期</th><th class="n">予想数量(kg)</th><th class="n">実績数量(kg)</th><th class="n">秀品率(%)</th><th class="n">販売収量(kg)</th><th class="n">販売率(%)</th><th class="n">実売数量(kg)</th><th class="n">単価(円/kg)</th><th class="n">売上予測</th></tr></thead><tbody>';
  L.forEach(x=>{const s=x.s,c=x.c,d=`data-g="${x.g}" data-i="${x.i}" data-k="${x.k}"`;
   h+=`<tr data-key="${x.key}"><td>${esc(x.f.name)}</td><td>${esc(RN(x.g,x.i))}</td><td>${s.season===""||s.season==null?"":SEA[s.season]}</td><td>${esc(s.crop)}</td><td>${esc(s.variety||"")}</td><td>${esc(s.cult||"")}</td><td>${hspan(x.key)}</td>`+
-   `<td class="n lk">${c.est==null?"－":fmtKg(c.est)}</td><td class="n in"><input class="yin" type="number" min="0" step="any" ${d} data-yf="act" value="${c.rec.act==null||c.rec.act===""?"":c.rec.act}" placeholder="" style="width:80px"></td><td class="n lk">${c.rate}</td><td class="n lk" data-rv="sell">${fmtKg(c.sell)}${c.act==null&&c.sell!=null?'<span style="opacity:.6;font-size:11px">（予想）</span>':""}</td><td class="n lk">${c.hr}</td><td class="n lk" data-rv="real">${fmtKg(c.real)}</td><td class="n lk">${c.pr==null?"未設定":fmtYen(c.pr)+(Math.abs(c.pm-1)>0.001?` <small style="opacity:.7">×${c.pm.toFixed(2)}</small>`:"")}</td><td class="n lk" data-rv="rev">${fmtYen(c.rev)}</td></tr>`});
+   `<td class="n lk">${c.est==null?"－":fmtKg(c.est)}</td><td class="n in"><input class="yin" type="number" min="0" step="any" ${d} data-yf="act" value="${c.rec.act==null||c.rec.act===""?"":c.rec.act}" placeholder="" style="width:80px"></td><td class="n lk">${c.rate}</td><td class="n lk" data-rv="sell">${fmtKg(c.sell)}${c.act==null&&c.sell!=null?'<span style="opacity:.6;font-size:11px">（予想）</span>':""}</td><td class="n lk">${c.hr}</td><td class="n lk" data-rv="real">${fmtKg(c.real)}</td><td class="n lk">${c.pr==null?"未設定":fmtYen(c.pr)+(Math.abs(c.cp-1)>0.001?` <small style="opacity:.7">×${c.cp.toFixed(2)}</small>`:"")}</td><td class="n lk" data-rv="rev">${fmtYen(c.rev)}</td></tr>`});
  if(!L.length)h+='<tr><td colspan="15" style="opacity:.6">レコードがありません。栽培計画で野菜名を選んでください</td></tr>';
  $("yl").innerHTML=h+"</tbody>"}
 function refreshY(){const L=yrecs();ysummary(L);
@@ -2084,8 +2091,8 @@ function planChecks(){
  const add=(st,t,d,go)=>L.push({st,t,d,go});
  const defFam=+P.age===45&&+P.sage===43&&String(P.kids)==="17,20";
  add(defFam?"ng":"ok","世帯の情報（マイページ）",defFam?"本人45歳・配偶者43歳・子ども17,20歳の仮の例のままです。実際の年齢・扶養の状況に直してください（税・国保・控除の判定に使います）":famText(),"me");
- const cs=new Set();S.fields.forEach(f=>{if(f.on)f.ridges.forEach(r=>r.slots.forEach((sl,k)=>{if(k<(r.n||2)&&sl.crop)cs.add(sl.crop)}))});const np=[...cs].filter(c=>cropPrice(c)==null);
- add(!cs.size?"ng":np.length?"ng":"ok","売上の元になる栽培計画・卸単価",!cs.size?"栽培計画に野菜が入っていません":np.length?"卸単価が未設定の農作物："+np.join("、"):"栽培計画の野菜 "+cs.size+"種類・単価はすべて設定済み（売上予測 "+y(A.ry)+"）","yield");
+ const cs=new Set();S.fields.forEach(f=>{if(f.on)f.ridges.forEach(r=>r.slots.forEach((sl,k)=>{if(k<(r.n||2)&&sl.crop)cs.add(sl.crop)}))});const np=[...cs].filter(c=>cropPrice(c)==null&&cropRP(c)==null);
+ add(!cs.size?"ng":np.length?"ng":"ok","売上の元になる栽培計画・単価",!cs.size?"栽培計画に野菜が入っていません":np.length?"単価が未設定の農作物："+np.join("、"):"栽培計画の野菜 "+cs.size+"種類・単価はすべて設定済み（売上予測 "+y(A.ry)+"）","yield");
  if(P.revsrc=="ship")add(A.rs>0?"ok":"ng","出荷の実績（確定額）",A.rs>0?V.y+"年の出荷実績 "+y(A.rs):V.y+"年の出荷の記録がありません。出荷タブで確定額を入れてください","ship");
  let unp=0,none=0;try{const AG=agg(),C=costOf(AG);unp=C.nm-C.priced;none=Object.keys(AG.none).length}catch(e){}
  add(unp||none?"ng":"ok","肥培管理の価格と施肥例",(unp?"価格が未入力の資材が"+unp+"種類あります。":"")+(none?"施肥例が未登録の野菜が"+none+"種類あります。":"")||"資材の価格はすべて入っています（肥料費 "+y(A.mat)+"）","prep");
@@ -3389,3 +3396,5 @@ setTab(0);
 <!-- v168 -->
 <!-- v169 -->
 <!-- v170 -->
+<!-- v171 -->
+<!-- v172 -->
