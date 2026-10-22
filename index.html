@@ -2957,7 +2957,7 @@ function prnGo(done){let fin=false;const fi=()=>{if(fin)return;fin=true;const x=
  const st=Date.now();window.print();
  if(Date.now()-st>400){fi();return}
  if(!document.getElementById("pexit")){const b=document.createElement("button");b.id="pexit";b.type="button";b.textContent="印刷表示を閉じて戻る";b.onclick=fi;document.body.appendChild(b)}
- window.addEventListener("afterprint",fi,{once:true});setTimeout(fi,30000)}
+ window.addEventListener("afterprint",fi,{once:true})}
 function loadSeed(){try{const d=JSON.parse($("seedjson").textContent);S=migrate(d);S.rev=Date.now();swapPlan(V.y);fsel();return true}catch(e){return false}}
 const STDCAT=["荷造運賃手数料","動力光熱費","水利・租税・保険","通信・会計・その他"];
 function mStdList(){const have=new Set((S.mach||[]).map(r=>r.mid).filter(Boolean)),A=Math.max(0.1,Math.round(farmAreaM2()/100)/10);
@@ -2985,7 +2985,7 @@ document.addEventListener("click",e=>{if(e.target.closest("#ppr5"))mPrint()});
 
 /* ===== 6タブの一括印刷（1つのPDF） ===== */
 const ALLP=[["pg1","栽培計画",()=>render()],["pg4","肥培管理",()=>renderP()],["pg2","収量管理",()=>renderY()],["pg5","設備投資",null],["pg6","収支計画",()=>renderPlan()]];
-function pgSize(on){let s=document.getElementById("pgsz");if(s)s.remove();if(on){s=document.createElement("style");s.id="pgsz";s.textContent="@media print{@page{size:A4 landscape;margin:10mm}}";document.head.appendChild(s)}}
+function pgSize(on){let s=document.getElementById("pgsz");if(s)s.remove();if(on){s=document.createElement("style");s.id="pgsz";s.textContent="@page{size:A4 landscape;margin:10mm}";document.head.appendChild(s)}}
 function prnClone(el){
  const c=el.cloneNode(true),o1=el.querySelectorAll("select"),c1=c.querySelectorAll("select"),o2=el.querySelectorAll("input,textarea"),c2=c.querySelectorAll("input,textarea");
  c1.forEach((x,i)=>{const t=document.createElement("span"),o=o1[i];t.textContent=o&&o.selectedIndex>=0?o.options[o.selectedIndex].text:"";x.replaceWith(t)});
