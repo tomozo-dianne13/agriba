@@ -5,19 +5,18 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>圃場マップ</title>
 <!--
-  AGRIBA 圃場マップ（単独試作版）
-  ・地図: 国土地理院タイル（APIキー不要・無料）
-  ・地図ライブラリ: Leaflet 1.9.4（この画面を開いたときだけ読み込む想定）
-  ・保存: localStorage キー "agriba_fieldmap_v1"
-  ・AGRIBA組み込み時: 下の FieldMap モジュールを圃場情報（マイページ）から呼び出し、
-    exportData() の形式（圃場名・面積・頂点・畝リスト）を圃場/区画/畝に取り込む想定
+  AGRIBA 圃場マップ（単独試作版 v2）
+  ・地図: 国土地理院タイル（APIキー不要・無料） / 地図ライブラリ: Leaflet 1.9.4
+  ・保存: localStorage "agriba_fieldmap_v1"（v1のデータは自動で区画形式に移行）
+  ・構成: 圃場（名前・区画数）＞ 区画（形・畝設定・個別畝幅）＞ 畝
+  ・AGRIBA組み込み時: exportData() の形式でマイページの圃場/区画、栽培計画の畝へ反映する想定
 -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root{
   --g:#2f5d3a; --g2:#e7efe3; --cream:#f7f1e3; --or:#e8892b; --ink:#24302a; --mut:#6b766e;
-  --line:#d9dccf; --white:#fff; --bed:#3fa45b;
+  --line:#d9dccf;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--cream);color:var(--ink);
@@ -35,6 +34,7 @@ header h1{font-size:18px;margin:0;flex:1;font-weight:700}
 .search input{flex:1}
 input,select{font-size:16px;height:38px;border:1px solid var(--line);border-radius:10px;padding:0 10px;
   background:#fff;color:var(--ink);min-width:0}
+input:disabled{background:#f1f1ec;color:var(--mut)}
 input::placeholder{color:#a6aca4}
 .btn{height:38px;border:none;border-radius:19px;padding:0 14px;font-size:14px;font-weight:600;
   background:var(--g2);color:var(--g);cursor:pointer;white-space:nowrap}
@@ -46,7 +46,7 @@ input::placeholder{color:#a6aca4}
 .rb.or{background:var(--or);color:#fff;border:none}
 .rb svg{width:18px;height:18px}
 .card{background:#fff;border:1px solid var(--line);border-radius:16px;margin:12px;padding:12px}
-.card h2{font-size:15px;margin:0 0 10px;color:var(--g);display:flex;align-items:center;gap:8px}
+.card h2{font-size:15px;margin:0 0 10px;color:var(--g)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .row select{flex:1}
 .tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -57,22 +57,40 @@ input::placeholder{color:#a6aca4}
 .stat{background:var(--cream);border-radius:12px;padding:8px 10px}
 .stat b{display:block;font-size:18px;color:var(--ink)}
 .stat span{font-size:12px;color:var(--mut)}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:10px}
+.tab{height:34px;border-radius:17px;padding:0 14px;border:1px solid var(--line);background:var(--g2);color:var(--g);
+  font-size:14px;font-weight:600;flex:none;cursor:pointer}
+.tab.on{border:2px solid var(--or);background:#fff}
+.tab .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--bed,#3fa45b);margin-left:5px;vertical-align:middle}
+.seg{display:flex;background:var(--g2);border-radius:19px;padding:3px;margin-bottom:10px}
+.seg button{flex:1;height:32px;border:none;border-radius:16px;background:transparent;color:var(--g);font-size:14px;font-weight:600;cursor:pointer}
+.seg button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.edges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.edges span{background:var(--cream);border-radius:10px;padding:4px 8px;font-size:13px}
+.sub{font-size:12px;color:var(--mut);margin-top:10px}
+.warn{color:#c0392b;font-size:13px;margin-top:8px;min-height:0}
 .dir{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
 .dir input[type=range]{flex:1;height:auto;border:none;padding:0;accent-color:var(--g)}
 .dir .val{width:64px;text-align:right}
 .chk{display:flex;align-items:center;gap:6px;font-size:13px}
 .chk input{width:18px;height:18px}
 table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right}
 th:first-child,td:first-child{text-align:left}
-th{background:var(--g2);color:var(--g);font-weight:600;position:sticky;top:0}
+th{background:var(--g2);color:var(--g);font-weight:600;position:sticky;top:0;z-index:1}
 tbody tr{cursor:pointer;background:var(--cream)}
 tbody tr.hi{background:#fde3c8}
 tfoot td{font-weight:700;background:#fff}
+td input.wi{width:72px;height:32px;text-align:right;padding:0 6px}
+td input.wi.ov{color:var(--or);font-weight:700;border-color:var(--or)}
 .tblBox{max-height:50vh;overflow:auto;border-radius:10px;border:1px solid var(--line)}
 .empty{color:var(--mut);font-size:13px;padding:6px 2px}
 .vtx{background:#fff;border:3px solid var(--or);border-radius:50%}
 .vtx.first{border-color:#d33;width:22px!important;height:22px!important;margin:-11px 0 0 -11px!important}
+.elab{position:absolute;transform:translate(-50%,-50%);background:#fff;border:1px solid var(--or);border-radius:8px;
+  padding:1px 6px;font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;pointer-events:none}
+.leaflet-tooltip.plab{background:rgba(255,255,255,.85);border:none;box-shadow:none;font-weight:700;color:var(--g);font-size:13px;padding:1px 6px}
+.leaflet-tooltip.plab:before{display:none}
 .note{font-size:12px;color:var(--mut);margin:8px 2px 0}
 </style>
 </head>
@@ -93,6 +111,7 @@ tfoot td{font-weight:700;background:#fff}
   <div class="hint" id="hint"></div>
 </div>
 
+<!-- 圃場 -->
 <div class="card">
   <h2>圃場</h2>
   <div class="row">
@@ -100,38 +119,59 @@ tfoot td{font-weight:700;background:#fff}
     <button class="rb or" id="btnAdd" title="圃場を追加" aria-label="圃場を追加">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
     </button>
-    <button class="rb" id="btnRen" title="名前を変更" aria-label="名前を変更">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
-    </button>
-    <button class="rb" id="btnDel" title="削除" aria-label="削除">
+    <button class="rb" id="btnDel" title="圃場を削除" aria-label="圃場を削除">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
     </button>
   </div>
-  <div class="tools">
-    <button class="btn or" id="btnDraw">圃場を囲む</button>
+  <div class="grid" style="margin-top:10px">
+    <label>圃場名<input id="fName" type="text" placeholder="例: A圃場"></label>
+    <label>区画数<input id="fCount" type="number" inputmode="numeric" min="1" max="26" step="1"></label>
+  </div>
+  <div class="stats" style="margin-top:10px">
+    <div class="stat"><span>圃場の合計面積</span><b id="sFArea">-</b></div>
+    <div class="stat"><span>全区画の畝数</span><b id="sFBeds">-</b></div>
+  </div>
+</div>
+
+<!-- 区画 -->
+<div class="card">
+  <h2>区画</h2>
+  <div class="tabs" id="plotTabs"></div>
+  <div class="tools" style="margin-top:0">
+    <button class="btn or" id="btnDraw">区画を囲む</button>
     <button class="btn w" id="btnUndo">1つ戻す</button>
     <button class="btn w" id="btnDone">完了</button>
     <button class="btn w" id="btnFit">全体を表示</button>
   </div>
   <div class="stats" style="margin-top:12px">
-    <div class="stat"><span>圃場面積</span><b id="sArea">-</b></div>
+    <div class="stat"><span>区画面積</span><b id="sArea">-</b></div>
     <div class="stat"><span>アール換算</span><b id="sA">-</b></div>
     <div class="stat"><span>外周</span><b id="sPer">-</b></div>
     <div class="stat"><span>頂点数</span><b id="sPts">-</b></div>
   </div>
-  <p class="note">角の点はドラッグで微調整できます。航空写真からの計測のため、数％程度の誤差があります。</p>
+  <div class="sub">辺の長さ（地図の番号と対応）</div>
+  <div class="edges" id="edges"><span>-</span></div>
+  <p class="note">角の点はドラッグで微調整できます。ほかの区画は地図上で押すと切り替わります。航空写真からの計測のため、数％程度の誤差があります。</p>
 </div>
 
+<!-- 畝の設定 -->
 <div class="card">
   <h2>畝の設定</h2>
+  <div class="seg">
+    <button id="mAuto">最大本数で自動</button>
+    <button id="mCount">本数を指定</button>
+  </div>
   <div class="grid">
+    <label>畝数（本）<input id="pCount" type="number" inputmode="numeric" min="1" step="1"></label>
     <label>畝幅（m）<input id="pBed" type="number" inputmode="decimal" step="0.05" min="0.1"></label>
-    <label>通路幅（m）<input id="pPath" type="number" inputmode="decimal" step="0.05" min="0"></label>
+    <label id="lPath">通路幅（m）<input id="pPath" type="number" inputmode="decimal" step="0.05" min="0"></label>
     <label>枕地・両端の余白（m）<input id="pHead" type="number" inputmode="decimal" step="0.1" min="0"></label>
     <label>外周の余白（m）<input id="pSide" type="number" inputmode="decimal" step="0.1" min="0"></label>
     <label>最短の畝長（m）<input id="pMin" type="number" inputmode="decimal" step="0.5" min="0"></label>
     <label>畝名の頭（例: A）<input id="pPre" type="text" maxlength="6"></label>
   </div>
+  <div class="warn" id="warn"></div>
+  <p class="note" id="modeNote"></p>
   <div class="dir">
     <span style="font-size:13px;color:var(--mut)">畝の向き</span>
     <input type="range" id="pDir" min="0" max="179" step="1">
@@ -144,16 +184,19 @@ tfoot td{font-weight:700;background:#fff}
   <p class="note">向きは北を0°、東西方向が90°です。</p>
 </div>
 
+<!-- 畝の一覧 -->
 <div class="card">
-  <h2>畝の一覧</h2>
+  <h2 id="listTitle">畝の一覧</h2>
   <div class="stats" style="margin-bottom:10px">
     <div class="stat"><span>畝の本数</span><b id="sN">-</b></div>
     <div class="stat"><span>畝の総延長</span><b id="sLen">-</b></div>
     <div class="stat"><span>畝の合計面積</span><b id="sBA">-</b></div>
-    <div class="stat"><span>作付率（畝÷圃場）</span><b id="sRate">-</b></div>
+    <div class="stat"><span>作付率（畝÷区画）</span><b id="sRate">-</b></div>
   </div>
   <div id="tblWrap"></div>
+  <p class="note">畝幅は1本ずつ書き換えられます（変えた畝はオレンジ）。空欄にすると共通の畝幅に戻ります。</p>
   <div class="tools">
+    <button class="btn w" id="btnResetW">個別の畝幅を戻す</button>
     <button class="btn w" id="btnCsv">CSVで保存</button>
     <button class="btn w" id="btnJson">AGRIBA連携用データ</button>
   </div>
@@ -163,25 +206,46 @@ tfoot td{font-weight:700;background:#fff}
 <script>
 const FieldMap = (() => {
   const KEY = 'agriba_fieldmap_v1';
-  const R = 6378137, D = Math.PI / 180;
+  const R = 6378137, D = Math.PI / 180, LET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const $ = id => document.getElementById(id);
   const f1 = v => (Math.round(v * 10) / 10).toLocaleString('ja-JP', {minimumFractionDigits:1, maximumFractionDigits:1});
+  const r2 = v => Math.round(v * 100) / 100;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const circ = i => i < 20 ? String.fromCharCode(0x2460 + i) : `(${i+1})`;
 
   /* ---------- データ ---------- */
+  let seq = 0;
+  const defParams = () => ({bed:0.9, path:0.5, head:0.5, side:0.3, minLen:1, dir:0, auto:true, mode:'auto', count:10});
+  const newPlot = i => ({id:'p' + Date.now().toString(36) + (seq++), label:LET[i % 26] + '区', prefix:LET[i % 26], pts:[], params:defParams(), widths:{}});
+
   let S = load();
   function load(){
-    try{ const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.fields)) return s; }catch(e){}
-    return {fields:[], cur:null, view:null};
+    let s = null;
+    try{ s = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+    if (!s || !Array.isArray(s.fields)) s = {fields:[], cur:null, view:null};
+    s.fields.forEach(f => {
+      if (!Array.isArray(f.plots)){                       // v1 → v2 移行
+        const p = newPlot(0);
+        if (f.pts) p.pts = f.pts;
+        if (f.params) p.params = {...defParams(), ...f.params};
+        if (f.prefix) p.prefix = f.prefix;
+        f.plots = [p]; f.cur = p.id;
+        delete f.pts; delete f.params; delete f.prefix;
+      }
+      f.plots.forEach(p => { p.params = {...defParams(), ...p.params}; p.widths = p.widths || {}; });
+      if (!f.plots.find(p => p.id === f.cur)) f.cur = f.plots[0].id;
+    });
+    return s;
   }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
-  const defParams = () => ({bed:0.9, path:0.5, head:0.5, side:0.3, minLen:1, dir:0, auto:true});
   function newField(name){
-    const f = {id:'f'+Date.now(), name, prefix:String.fromCharCode(65 + S.fields.length % 26), pts:[], params:defParams()};
-    S.fields.push(f); S.cur = f.id; save(); return f;
+    const f = {id:'f' + Date.now().toString(36), name, plots:[newPlot(0)]};
+    f.cur = f.plots[0].id; S.fields.push(f); S.cur = f.id; save(); return f;
   }
-  const cur = () => S.fields.find(f => f.id === S.cur);
+  const fld = () => S.fields.find(f => f.id === S.cur);
+  const plot = () => { const f = fld(); return f.plots.find(p => p.id === f.cur); };
   if (!S.fields.length) newField('A圃場');
-  if (!cur()) S.cur = S.fields[0].id;
+  if (!fld()) S.cur = S.fields[0].id;
 
   /* ---------- 計算 ---------- */
   function proj(pts){
@@ -191,7 +255,12 @@ const FieldMap = (() => {
   }
   const unproj = (o,x,y) => [o.lat0 + y/(R*D), o.lng0 + x/(R*D*o.k)];
   function polyArea(xy){ let s=0; for(let i=0;i<xy.length;i++){const a=xy[i],b=xy[(i+1)%xy.length]; s+=a[0]*b[1]-b[0]*a[1];} return Math.abs(s)/2; }
-  function perim(xy){ let s=0; for(let i=0;i<xy.length;i++){const a=xy[i],b=xy[(i+1)%xy.length]; s+=Math.hypot(b[0]-a[0],b[1]-a[1]);} return s; }
+  function edgeLens(pts, closed){
+    if (pts.length < 2) return [];
+    const xy = proj(pts).xy, n = xy.length, out = [];
+    for (let i = 0; i < (closed ? n : n - 1); i++){ const a = xy[i], b = xy[(i+1)%n]; out.push(Math.hypot(b[0]-a[0], b[1]-a[1])); }
+    return out;
+  }
   function longestBearing(xy){
     let best=0, br=0;
     for(let i=0;i<xy.length;i++){const a=xy[i],b=xy[(i+1)%xy.length],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy);
@@ -207,37 +276,55 @@ const FieldMap = (() => {
   }
   function inter(A,B){ const o=[]; for(const a of A) for(const b of B){const l=Math.max(a[0],b[0]), r=Math.min(a[1],b[1]); if(r>l) o.push([l,r]);} return o; }
 
-  // 畝の自動配置：畝方向をx軸に回転 → 帯ごとに圃場内に収まる区間を求める
-  function layout(f){
-    const o = proj(f.pts), p = f.params;
-    const bearing = p.auto ? longestBearing(o.xy) : p.dir;
+  // 畝の配置：畝方向をx軸に回転 → 帯（畝1本分）ごとに区画内に収まる区間を求める
+  function layout(p){
+    const o = proj(p.pts), P = p.params;
+    const bearing = P.auto ? longestBearing(o.xy) : P.dir;
     const a = (90 - bearing) * D;
     const poly = o.xy.map(q => rot(q, -a));
     const ys = poly.map(q => q[1]), minY = Math.min(...ys), maxY = Math.max(...ys), H = maxY - minY;
-    const bed = Math.max(0.05, +p.bed||0), path = Math.max(0, +p.path||0), pitch = bed + path;
-    const side = Math.max(0, +p.side||0), head = Math.max(0, +p.head||0), minLen = Math.max(0, +p.minLen||0);
-    const n = Math.floor((H - 2*side + path) / pitch + 1e-9);
-    const beds = [];
-    if (n > 0){
-      let y = minY + (H - (n*pitch - path)) / 2;
-      for(let i=0;i<n;i++, y+=pitch){
-        const y0=y, y1=y+bed, e=1e-6;
-        let iv = inter(spans(poly,y0+e), spans(poly,y1-e));
-        for(const vy of ys) if(vy>y0+e && vy<y1-e) iv = inter(iv, spans(poly,vy));
-        for(const [l,r] of iv){
-          const x0=l+head, x1=r-head;
-          if (x1-x0 >= Math.max(minLen, 0.1)) beds.push({x0,x1,y0,y1});
-        }
+    const bedDef = Math.max(0.05, +P.bed || 0);
+    const wOf = i => (+p.widths[i] > 0 ? +p.widths[i] : bedDef);
+    const side = Math.max(0, +P.side || 0), head = Math.max(0, +P.head || 0), minLen = Math.max(0, +P.minLen || 0);
+    const avail = H - 2*side;
+    const sumW = n => { let s = 0; for (let i = 0; i < n; i++) s += wOf(i); return s; };
+    let n = 0, path = Math.max(0, +P.path || 0), warn = '';
+
+    if (P.mode === 'count'){
+      n = Math.max(1, Math.round(+P.count || 1));
+      path = n > 1 ? (avail - sumW(n)) / (n - 1) : 0;
+      if (sumW(n) > avail + 1e-9){
+        const want = n;
+        path = 0; while (n > 0 && sumW(n) > avail + 1e-9) n--;
+        warn = `${want}本は入りません（通路0mでも最大${n}本）。本数か畝幅を見直してください。`;
       }
+    } else {
+      let tot = 0;
+      while (n < 3000){ const add = (n ? path : 0) + wOf(n); if (tot + add > avail + 1e-9) break; tot += add; n++; }
     }
-    beds.sort((m,n2)=> m.y0-n2.y0 || m.x0-n2.x0);
-    const pre = (f.prefix||'').trim() || 'A';
-    const list = beds.map((b,i) => {
+
+    const total = sumW(n) + Math.max(0, n - 1) * path;
+    let y = minY + (H - total) / 2;
+    const raw = [];
+    for (let i = 0; i < n; i++){
+      const w = wOf(i), y0 = y, y1 = y + w, e = 1e-6;
+      let iv = inter(spans(poly, y0+e), spans(poly, y1-e));
+      for (const vy of ys) if (vy > y0+e && vy < y1-e) iv = inter(iv, spans(poly, vy));
+      for (const [l, r] of iv){
+        const x0 = l + head, x1 = r - head;
+        if (x1 - x0 >= Math.max(minLen, 0.1)) raw.push({strip:i, w, x0, x1, y0, y1});
+      }
+      y += w + path;
+    }
+    raw.sort((m, k) => m.y0 - k.y0 || m.x0 - k.x0);
+    const pre = (p.prefix || '').trim() || 'A';
+    const beds = raw.map((b, i) => {
       const len = b.x1 - b.x0;
-      const corners = [[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]].map(q => { const r2 = rot(q,a); return unproj(o, r2[0], r2[1]); });
-      return {name:`${pre}-${i+1}`, length:len, area:len*bed, corners};
+      const corners = [[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]].map(q => { const t = rot(q, a); return unproj(o, t[0], t[1]); });
+      return {name:`${pre}-${i+1}`, strip:b.strip, width:b.w, custom:+p.widths[b.strip] > 0, length:len, area:len*b.w, corners};
     });
-    return {area:polyArea(o.xy), perim:perim(o.xy), bearing, beds:list};
+    if (!warn && P.mode === 'count' && beds.length < n) warn = `区画の形の都合で、${n}本のうち${n - beds.length}本は最短の畝長に届かず除外しました。`;
+    return {area:polyArea(o.xy), perim:edgeLens(p.pts, true).reduce((s,v)=>s+v,0), bearing, path, n, beds, warn};
   }
 
   /* ---------- 地図 ---------- */
@@ -248,134 +335,215 @@ const FieldMap = (() => {
   const photo = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', {maxNativeZoom:18, maxZoom:21, attribution:attr}).addTo(map);
   const pale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {maxNativeZoom:18, maxZoom:21, attribution:attr});
   L.control.layers({'航空写真':photo, '地図':pale}, null, {position:'topright'}).addTo(map);
-  const gField = L.layerGroup().addTo(map), gBeds = L.layerGroup().addTo(map), gVtx = L.layerGroup().addTo(map);
+  const gField = L.layerGroup().addTo(map), gBeds = L.layerGroup().addTo(map), gEdge = L.layerGroup().addTo(map), gVtx = L.layerGroup().addTo(map);
   map.on('moveend', () => { S.view = {c:[map.getCenter().lat, map.getCenter().lng], z:map.getZoom()}; save(); });
 
-  let drawing = false, hiIdx = -1, bedLayers = [], result = null;
+  let drawing = false, hiIdx = -1, bedLayers = [], results = {};
 
   function hint(t){ const h=$('hint'); h.textContent=t||''; h.classList.toggle('on', !!t); }
   function setDrawing(on){
     drawing = on; $('btnDraw').classList.toggle('on', on);
-    hint(on ? '地図をタップして角を追加（最初の赤い点をタップで完了）' : '');
+    hint(on ? `${plot().label}：地図をタップして角を追加（最初の赤い点をタップで完了）` : '');
     renderVtx(); render();
   }
-
   map.on('click', e => {
     if (!drawing) return;
-    cur().pts.push([e.latlng.lat, e.latlng.lng]); save(); renderVtx(); render();
+    plot().pts.push([e.latlng.lat, e.latlng.lng]); save(); renderVtx(); render();
   });
 
   function renderVtx(){
     gVtx.clearLayers();
-    const f = cur();
-    f.pts.forEach((p,i) => {
-      const m = L.marker(p, {draggable:true, icon:L.divIcon({className:'vtx'+(i===0&&drawing?' first':''), iconSize:[18,18]})});
-      m.on('drag', e => { f.pts[i] = [e.latlng.lat, e.latlng.lng]; render(true); });
+    const p = plot();
+    p.pts.forEach((pt, i) => {
+      const m = L.marker(pt, {draggable:true, icon:L.divIcon({className:'vtx'+(i===0&&drawing?' first':''), iconSize:[18,18]})});
+      m.on('drag', e => { p.pts[i] = [e.latlng.lat, e.latlng.lng]; render(true); });
       m.on('dragend', () => { save(); render(); });
-      m.on('click', () => { if (drawing && i===0 && f.pts.length>=3) setDrawing(false); });
+      m.on('click', () => { if (drawing && i===0 && p.pts.length>=3) setDrawing(false); });
       gVtx.addLayer(m);
     });
   }
 
   function render(light){
-    const f = cur();
-    gField.clearLayers(); gBeds.clearLayers(); bedLayers = [];
-    if (f.pts.length >= 2){
-      const style = {color:'#e8892b', weight:3, fillOpacity:0.08, fillColor:'#e8892b'};
-      gField.addLayer(f.pts.length>=3 ? L.polygon(f.pts, style) : L.polyline(f.pts, style));
-    }
-    result = f.pts.length >= 3 ? layout(f) : null;
-    if (result && !drawing){
-      result.beds.forEach((b,i) => {
-        const pl = L.polygon(b.corners, {color:'#1f6b35', weight:1, fillColor:'#3fa45b', fillOpacity:0.55});
-        pl.bindTooltip(`${b.name}　${f1(b.length)}m／${f1(b.area)}㎡`, {sticky:true});
-        pl.on('click', () => highlight(i, true));
-        gBeds.addLayer(pl); bedLayers.push(pl);
-      });
-    }
+    const f = fld(), cp = plot();
+    gField.clearLayers(); gBeds.clearLayers(); gEdge.clearLayers(); bedLayers = []; results = {};
+    f.plots.forEach(p => {
+      const isCur = p.id === cp.id;
+      const r = p.pts.length >= 3 ? layout(p) : null;
+      results[p.id] = r;
+      if (p.pts.length >= 2){
+        const st = isCur ? {color:'#e8892b', weight:3, fillOpacity:0.08, fillColor:'#e8892b'}
+                         : {color:'#ffffff', weight:2, dashArray:'6 4', fillOpacity:0.06, fillColor:'#ffffff'};
+        const shp = p.pts.length >= 3 ? L.polygon(p.pts, st) : L.polyline(p.pts, st);
+        if (!isCur) shp.on('click', () => { if (!drawing) selectPlot(p.id); });
+        if (p.pts.length >= 3 && !(isCur && drawing)) shp.bindTooltip(p.label, {permanent:true, direction:'center', className:'plab'});
+        gField.addLayer(shp);
+      }
+      if (r && !(isCur && drawing)){
+        r.beds.forEach((b, i) => {
+          const pl = L.polygon(b.corners, isCur
+            ? {color:b.custom?'#a85a10':'#1f6b35', weight:1, fillColor:b.custom?'#f0b26a':'#3fa45b', fillOpacity:0.6}
+            : {color:'#1f6b35', weight:1, fillColor:'#3fa45b', fillOpacity:0.3});
+          if (isCur){
+            pl.bindTooltip(`${b.name}　幅${f1(b.width)}m／${f1(b.length)}m／${f1(b.area)}㎡`, {sticky:true});
+            pl.on('click', () => highlight(i, true));
+            bedLayers.push(pl);
+          } else pl.on('click', () => { if (!drawing) selectPlot(p.id); });
+          gBeds.addLayer(pl);
+        });
+      }
+    });
+    // 辺の長さ（今の区画）
+    const closed = cp.pts.length >= 3 && !drawing;
+    edgeLens(cp.pts, closed).forEach((len, i) => {
+      const a = cp.pts[i], b = cp.pts[(i+1) % cp.pts.length];
+      const mid = [(a[0]+b[0])/2, (a[1]+b[1])/2];
+      gEdge.addLayer(L.marker(mid, {interactive:false, keyboard:false,
+        icon:L.divIcon({className:'', iconSize:[0,0], html:`<span class="elab">${circ(i)} ${f1(len)}m</span>`})}));
+    });
     panel(light);
   }
 
   function highlight(i, scroll){
-    if (hiIdx>=0 && bedLayers[hiIdx]) bedLayers[hiIdx].setStyle({fillColor:'#3fa45b', color:'#1f6b35'});
+    const bs = results[plot().id] ? results[plot().id].beds : [];
+    if (hiIdx >= 0 && bedLayers[hiIdx] && bs[hiIdx]) bedLayers[hiIdx].setStyle({fillColor:bs[hiIdx].custom?'#f0b26a':'#3fa45b', color:bs[hiIdx].custom?'#a85a10':'#1f6b35'});
     hiIdx = i;
-    if (bedLayers[i]) bedLayers[i].setStyle({fillColor:'#e8892b', color:'#a85a10'});
-    document.querySelectorAll('#tblWrap tbody tr').forEach((tr,k) => tr.classList.toggle('hi', k===i));
-    if (scroll){ const tr = document.querySelectorAll('#tblWrap tbody tr')[i]; if (tr) tr.scrollIntoView({block:'nearest'}); }
+    if (bedLayers[i]) bedLayers[i].setStyle({fillColor:'#e8892b', color:'#7a3f05'});
+    const trs = document.querySelectorAll('#tblWrap tbody tr');
+    trs.forEach((tr,k) => tr.classList.toggle('hi', k===i));
+    if (scroll && trs[i]) trs[i].scrollIntoView({block:'nearest'});
   }
 
   /* ---------- パネル ---------- */
   function panel(light){
-    const f = cur();
-    $('sPts').textContent = f.pts.length ? f.pts.length + '点' : '-';
-    if (result){
-      $('sArea').textContent = f1(result.area) + '㎡';
-      $('sA').textContent = f1(result.area/100) + 'a';
-      $('sPer').textContent = f1(result.perim) + 'm';
-    } else { $('sArea').textContent = $('sA').textContent = $('sPer').textContent = '-'; }
+    const f = fld(), p = plot(), P = p.params, r = results[p.id];
 
-    if (f.params.auto && result){ $('pDir').value = result.bearing; $('pDirN').value = result.bearing; }
+    // 圃場合計
+    let fa = 0, fb = 0, any = false;
+    f.plots.forEach(q => { const rr = results[q.id]; if (rr){ any = true; fa += rr.area; fb += rr.beds.length; } });
+    $('sFArea').textContent = any ? `${f1(fa)}㎡（${f1(fa/100)}a）` : '-';
+    $('sFBeds').textContent = any ? fb + '本' : '-';
+
+    // 区画
+    $('sPts').textContent = p.pts.length ? p.pts.length + '点' : '-';
+    $('sArea').textContent = r ? f1(r.area) + '㎡' : '-';
+    $('sA').textContent = r ? f1(r.area/100) + 'a' : '-';
+    $('sPer').textContent = r ? f1(r.perim) + 'm' : '-';
+    const el = edgeLens(p.pts, p.pts.length >= 3 && !drawing);
+    $('edges').innerHTML = el.length ? el.map((L2,i) => `<span>${circ(i)} ${f1(L2)}m</span>`).join('') : '<span>-</span>';
+
+    // 畝の設定（自動計算値の表示）
+    if (P.auto && r){ $('pDir').value = r.bearing; $('pDirN').value = r.bearing; }
+    if (r && document.activeElement !== $('pCount') && P.mode === 'auto') $('pCount').value = r.n;
+    if (r && P.mode === 'count' && document.activeElement !== $('pPath')) $('pPath').value = r2(r.path);
+    $('warn').textContent = r && r.warn ? r.warn : '';
     if (light) return;
 
-    const beds = (result && !drawing) ? result.beds : [];
-    const tl = beds.reduce((a,b)=>a+b.length,0), ta = beds.reduce((a,b)=>a+b.area,0);
+    const beds = (r && !drawing) ? r.beds : [];
+    $('listTitle').textContent = `畝の一覧（${esc(f.name)} ${p.label}）`;
+    const tl = beds.reduce((s,b)=>s+b.length,0), ta = beds.reduce((s,b)=>s+b.area,0);
     $('sN').textContent = beds.length ? beds.length + '本' : '-';
     $('sLen').textContent = beds.length ? f1(tl) + 'm' : '-';
     $('sBA').textContent = beds.length ? f1(ta) + '㎡' : '-';
-    $('sRate').textContent = beds.length ? f1(ta/result.area*100) + '%' : '-';
+    $('sRate').textContent = beds.length ? f1(ta/r.area*100) + '%' : '-';
     if (!beds.length){
-      $('tblWrap').innerHTML = `<div class="empty">${f.pts.length<3 ? '「圃場を囲む」で圃場の角を3点以上タップしてください。' : drawing ? '「完了」を押すと畝を配置します。' : '畝が入りません。畝幅や余白を見直してください。'}</div>`;
+      $('tblWrap').innerHTML = `<div class="empty">${p.pts.length<3 ? '「区画を囲む」で区画の角を3点以上タップしてください。' : drawing ? '「完了」を押すと畝を配置します。' : '畝が入りません。畝幅や余白を見直してください。'}</div>`;
       return;
     }
-    $('tblWrap').innerHTML = `<div class="tblBox"><table><thead><tr><th>畝名</th><th>長さ(m)</th><th>面積(㎡)</th></tr></thead><tbody>${
-      beds.map(b=>`<tr><td>${b.name}</td><td>${f1(b.length)}</td><td>${f1(b.area)}</td></tr>`).join('')
-    }</tbody><tfoot><tr><td>合計 ${beds.length}本</td><td>${f1(tl)}</td><td>${f1(ta)}</td></tr></tfoot></table></div>`;
-    document.querySelectorAll('#tblWrap tbody tr').forEach((tr,i) => tr.onclick = () => {
+    $('tblWrap').innerHTML = `<div class="tblBox"><table><thead><tr><th>畝名</th><th>畝幅(m)</th><th>長さ(m)</th><th>面積(㎡)</th></tr></thead><tbody>${
+      beds.map(b=>`<tr><td>${esc(b.name)}</td><td><input class="wi${b.custom?' ov':''}" type="number" inputmode="decimal" step="0.05" min="0" data-s="${b.strip}" value="${r2(b.width)}"></td><td>${f1(b.length)}</td><td>${f1(b.area)}</td></tr>`).join('')
+    }</tbody><tfoot><tr><td>合計 ${beds.length}本</td><td></td><td>${f1(tl)}</td><td>${f1(ta)}</td></tr></tfoot></table></div>`;
+    document.querySelectorAll('#tblWrap tbody tr').forEach((tr,i) => tr.addEventListener('click', e => {
+      if (e.target.tagName === 'INPUT') return;
       highlight(i); map.panTo(bedLayers[i].getBounds().getCenter());
-    });
+    }));
+    document.querySelectorAll('#tblWrap input.wi').forEach(inp => inp.addEventListener('change', () => {
+      const s = inp.dataset.s, val = parseFloat(inp.value);
+      if (isNaN(val) || val <= 0 || Math.abs(val - (+P.bed)) < 1e-9) delete p.widths[s]; else p.widths[s] = val;
+      save(); render();
+    }));
     hiIdx = -1;
   }
 
-  function fillForm(){
-    const f = cur(), p = f.params;
+  function fillFieldForm(){
+    const f = fld();
     $('fieldSel').innerHTML = S.fields.map(x => `<option value="${x.id}" ${x.id===S.cur?'selected':''}>${esc(x.name)}</option>`).join('');
-    $('pBed').value = p.bed; $('pPath').value = p.path; $('pHead').value = p.head; $('pSide').value = p.side;
-    $('pMin').value = p.minLen; $('pPre').value = f.prefix; $('pAuto').checked = p.auto;
-    $('pDir').value = p.dir; $('pDirN').value = p.dir;
+    $('fName').value = f.name; $('fCount').value = f.plots.length;
+    $('plotTabs').innerHTML = f.plots.map(p => `<button class="tab${p.id===f.cur?' on':''}" data-id="${p.id}">${esc(p.label)}${p.pts.length>=3?'<span class="dot"></span>':''}</button>`).join('');
+    document.querySelectorAll('#plotTabs .tab').forEach(b => b.onclick = () => selectPlot(b.dataset.id));
   }
-  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function fillPlotForm(){
+    const p = plot(), P = p.params;
+    $('pBed').value = P.bed; $('pPath').value = P.path; $('pHead').value = P.head; $('pSide').value = P.side;
+    $('pMin').value = P.minLen; $('pPre').value = p.prefix; $('pAuto').checked = P.auto;
+    $('pDir').value = P.dir; $('pDirN').value = P.dir; $('pCount').value = P.count;
+    const cnt = P.mode === 'count';
+    $('mAuto').classList.toggle('on', !cnt); $('mCount').classList.toggle('on', cnt);
+    $('pCount').disabled = !cnt; $('pPath').disabled = cnt;
+    $('lPath').firstChild.textContent = cnt ? '通路幅（m・自動）' : '通路幅（m）';
+    $('modeNote').textContent = cnt ? '指定した本数が均等に並ぶよう、通路幅を自動で計算します。'
+                                    : '畝幅と通路幅から、入る最大本数を自動で並べます。';
+  }
 
-  function fit(){ const f = cur(); if (f.pts.length>=2) map.fitBounds(L.latLngBounds(f.pts), {padding:[30,30], maxZoom:20}); }
-  function switchTo(id){ S.cur = id; save(); drawing=false; hint(''); $('btnDraw').classList.remove('on'); fillForm(); renderVtx(); render(); fit(); }
+  function fitPts(pts){ if (pts.length >= 2) map.fitBounds(L.latLngBounds(pts), {padding:[30,30], maxZoom:20}); }
+  function fitField(){ const all = fld().plots.flatMap(p => p.pts); fitPts(all); }
+  function stopDraw(){ drawing = false; hint(''); $('btnDraw').classList.remove('on'); }
+  function selectPlot(id){
+    fld().cur = id; save(); stopDraw(); fillFieldForm(); fillPlotForm(); renderVtx(); render();
+    const p = plot(); if (p.pts.length >= 3 && !map.getBounds().contains(L.latLngBounds(p.pts))) fitPts(p.pts);
+  }
+  function switchField(id){ S.cur = id; save(); stopDraw(); fillFieldForm(); fillPlotForm(); renderVtx(); render(); fitField(); }
 
-  /* ---------- 操作 ---------- */
-  $('fieldSel').onchange = e => switchTo(e.target.value);
-  $('btnAdd').onclick = () => { const n = prompt('圃場名', String.fromCharCode(65 + S.fields.length % 26) + '圃場'); if (n) { const f = newField(n.trim()); switchTo(f.id); setDrawing(true); } };
-  $('btnRen').onclick = () => { const f = cur(); const n = prompt('圃場名を変更', f.name); if (n){ f.name = n.trim(); save(); fillForm(); } };
+  /* ---------- 操作：圃場 ---------- */
+  $('fieldSel').onchange = e => switchField(e.target.value);
+  $('btnAdd').onclick = () => { const f = newField(LET[S.fields.length % 26] + '圃場'); switchField(f.id); $('fName').focus(); $('fName').select(); };
   $('btnDel').onclick = () => {
-    const f = cur(); if (!confirm(`「${f.name}」を削除しますか？`)) return;
+    const f = fld(); if (!confirm(`「${f.name}」とすべての区画を削除しますか？`)) return;
     S.fields = S.fields.filter(x => x.id !== f.id); if (!S.fields.length) newField('A圃場');
-    switchTo(S.fields[0].id);
+    switchField(S.fields[0].id);
   };
-  $('btnDraw').onclick = () => {
-    const f = cur();
-    if (drawing){ setDrawing(false); return; }
-    if (f.pts.length && !confirm('今の形を消して囲み直しますか？')) return;
-    f.pts = []; save(); setDrawing(true);
-  };
-  $('btnUndo').onclick = () => { cur().pts.pop(); save(); renderVtx(); render(); };
-  $('btnDone').onclick = () => { if (cur().pts.length < 3) { alert('角を3点以上タップしてください'); return; } setDrawing(false); };
-  $('btnFit').onclick = fit;
+  $('fName').addEventListener('input', () => {
+    fld().name = $('fName').value; save();
+    const o = $('fieldSel').querySelector(`option[value="${S.cur}"]`); if (o) o.textContent = $('fName').value || '（名称なし）';
+    $('listTitle').textContent = `畝の一覧（${$('fName').value} ${plot().label}）`;
+  });
+  $('fCount').addEventListener('change', () => {
+    const f = fld(); let n = Math.round(+$('fCount').value);
+    if (!(n >= 1)) n = 1; if (n > 26) n = 26;
+    if (n < f.plots.length){
+      const rm = f.plots.slice(n);
+      if (rm.some(p => p.pts.length) && !confirm(`${rm.map(p=>p.label).join('・')}の形と畝を削除しますか？`)){ $('fCount').value = f.plots.length; return; }
+      f.plots = f.plots.slice(0, n);
+      if (!f.plots.find(p => p.id === f.cur)) f.cur = f.plots[0].id;
+    } else while (f.plots.length < n) f.plots.push(newPlot(f.plots.length));
+    save(); stopDraw(); fillFieldForm(); fillPlotForm(); renderVtx(); render();
+  });
 
-  const num = (id, key) => $(id).addEventListener('input', () => { const val = parseFloat($(id).value); if (!isNaN(val)) { cur().params[key] = val; save(); render(); } });
-  num('pBed','bed'); num('pPath','path'); num('pHead','head'); num('pSide','side'); num('pMin','minLen');
-  $('pPre').addEventListener('input', () => { cur().prefix = $('pPre').value; save(); render(); });
-  const setDir = d => { const p = cur().params; p.dir = ((Math.round(d)%180)+180)%180; p.auto = false; $('pAuto').checked = false; $('pDir').value = p.dir; $('pDirN').value = p.dir; save(); render(); };
+  /* ---------- 操作：区画 ---------- */
+  $('btnDraw').onclick = () => {
+    const p = plot();
+    if (drawing){ setDrawing(false); return; }
+    if (p.pts.length && !confirm(`${p.label}の形を消して囲み直しますか？`)) return;
+    p.pts = []; save(); setDrawing(true); fillFieldForm();
+  };
+  $('btnUndo').onclick = () => { plot().pts.pop(); save(); renderVtx(); render(); };
+  $('btnDone').onclick = () => { if (plot().pts.length < 3) { alert('角を3点以上タップしてください'); return; } setDrawing(false); fillFieldForm(); };
+  $('btnFit').onclick = fitField;
+
+  /* ---------- 操作：畝 ---------- */
+  const num = (id, key) => $(id).addEventListener('input', () => { const val = parseFloat($(id).value); if (!isNaN(val)) { plot().params[key] = val; save(); render(); } });
+  num('pBed','bed'); num('pPath','path'); num('pHead','head'); num('pSide','side'); num('pMin','minLen'); num('pCount','count');
+  $('pPre').addEventListener('input', () => { plot().prefix = $('pPre').value; save(); render(); });
+  const setMode = m => { const P = plot().params; if (m === 'count' && P.mode !== 'count' && results[plot().id]) P.count = results[plot().id].n || P.count; P.mode = m; save(); fillPlotForm(); render(); };
+  $('mAuto').onclick = () => setMode('auto');
+  $('mCount').onclick = () => setMode('count');
+  const setDir = d => { const P = plot().params; P.dir = ((Math.round(d)%180)+180)%180; P.auto = false; $('pAuto').checked = false; $('pDir').value = P.dir; $('pDirN').value = P.dir; save(); render(); };
   $('pDir').addEventListener('input', () => setDir(+$('pDir').value));
   $('pDirN').addEventListener('change', () => setDir(+$('pDirN').value || 0));
-  $('pAuto').addEventListener('change', () => { const p = cur().params; p.auto = $('pAuto').checked; if (!p.auto && result) p.dir = result.bearing; save(); render(); });
-  $('btn90').onclick = () => setDir((result ? result.bearing : cur().params.dir) + 90);
+  $('pAuto').addEventListener('change', () => { const P = plot().params, r = results[plot().id]; P.auto = $('pAuto').checked; if (!P.auto && r) P.dir = r.bearing; save(); render(); });
+  $('btn90').onclick = () => { const r = results[plot().id]; setDir((r ? r.bearing : plot().params.dir) + 90); };
+  $('btnResetW').onclick = () => { const p = plot(); if (!Object.keys(p.widths).length) return; if (confirm('個別に変えた畝幅をすべて共通の畝幅に戻しますか？')){ p.widths = {}; save(); render(); } };
 
+  /* ---------- 移動 ---------- */
   $('btnLoc').onclick = () => {
     if (!navigator.geolocation) return alert('位置情報が使えません');
     navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 18), () => alert('現在地を取得できませんでした'), {enableHighAccuracy:true, timeout:10000});
@@ -394,26 +562,35 @@ const FieldMap = (() => {
 
   /* ---------- 書き出し（AGRIBA連携用） ---------- */
   function exportData(f){
-    const r = f.pts.length>=3 ? layout(f) : null;
-    return {
-      format:'agriba-fieldmap/1', name:f.name, prefix:f.prefix, area_m2:r?+r.area.toFixed(1):0,
-      vertices:f.pts, params:{...f.params, bearing:r?r.bearing:f.params.dir},
-      beds:r ? r.beds.map(b => ({name:b.name, length_m:+b.length.toFixed(1), area_m2:+b.area.toFixed(1)})) : []
-    };
+    const plots = f.plots.map(p => {
+      const r = p.pts.length >= 3 ? layout(p) : null;
+      return {
+        label:p.label, prefix:p.prefix, area_m2:r ? +r.area.toFixed(1) : 0,
+        edges_m:edgeLens(p.pts, p.pts.length >= 3).map(v => +v.toFixed(1)), vertices:p.pts,
+        params:{...p.params, bearing:r ? r.bearing : p.params.dir, path_used:r ? r2(r.path) : p.params.path},
+        beds:r ? r.beds.map(b => ({name:b.name, width_m:r2(b.width), length_m:+b.length.toFixed(1), area_m2:+b.area.toFixed(1)})) : []
+      };
+    });
+    return {format:'agriba-fieldmap/2', name:f.name, plotCount:f.plots.length,
+      area_m2:+plots.reduce((s,p)=>s+p.area_m2,0).toFixed(1), plots};
   }
   function download(name, text, type){
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
   $('btnCsv').onclick = () => {
-    const d = exportData(cur());
-    const rows = [['畝名','長さ(m)','面積(㎡)'], ...d.beds.map(b=>[b.name,b.length_m,b.area_m2])];
-    rows.push([], ['圃場面積(㎡)', d.area_m2], ['畝幅(m)', d.params.bed], ['通路幅(m)', d.params.path], ['畝の向き(°)', d.params.bearing]);
-    download(`${d.name}_畝一覧.csv`, '\ufeff' + rows.map(r=>r.join(',')).join('\n'), 'text/csv');
+    const d = exportData(fld());
+    const rows = [['圃場','区画','畝名','畝幅(m)','長さ(m)','面積(㎡)']];
+    d.plots.forEach(p => p.beds.forEach(b => rows.push([d.name, p.label, b.name, b.width_m, b.length_m, b.area_m2])));
+    rows.push([], ['区画','面積(㎡)','畝数','通路幅(m)','畝の向き(°)','辺の長さ(m)']);
+    d.plots.forEach(p => rows.push([p.label, p.area_m2, p.beds.length, p.params.path_used, p.params.bearing, p.edges_m.join(' / ')]));
+    rows.push(['圃場合計', d.area_m2, d.plots.reduce((s,p)=>s+p.beds.length,0)]);
+    const q = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g,'""')}"` : v;
+    download(`${d.name}_畝一覧.csv`, '﻿' + rows.map(r => r.map(q).join(',')).join('\n'), 'text/csv');
   };
-  $('btnJson').onclick = () => { const d = exportData(cur()); download(`${d.name}_fieldmap.json`, JSON.stringify(d, null, 2), 'application/json'); };
+  $('btnJson').onclick = () => { const d = exportData(fld()); download(`${d.name}_fieldmap.json`, JSON.stringify(d, null, 2), 'application/json'); };
 
-  fillForm(); renderVtx(); render(); fit();
+  fillFieldForm(); fillPlotForm(); renderVtx(); render(); fitField();
   return {exportData, layout, getState:() => S};
 })();
 </script>
