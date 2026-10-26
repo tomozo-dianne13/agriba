@@ -92,6 +92,15 @@ td input.wi.ov{color:var(--or);font-weight:700;border-color:var(--or)}
 .leaflet-tooltip.plab{background:rgba(255,255,255,.85);border:none;box-shadow:none;font-weight:700;color:var(--g);font-size:13px;padding:1px 6px}
 .leaflet-tooltip.plab:before{display:none}
 .note{font-size:12px;color:var(--mut);margin:8px 2px 0}
+.guide{background:var(--cream);border-radius:12px;padding:8px 10px;margin-bottom:12px}
+.guide summary{font-size:13px;font-weight:700;color:var(--g);cursor:pointer;padding:2px 0}
+.guide svg{width:100%;height:auto;display:block;background:#fff;border-radius:10px;margin-top:4px}
+.gcap{font-size:12px;color:var(--mut);margin-top:8px}
+.gt{font-size:10px;fill:var(--ink);font-family:inherit}
+.gt.v{font-weight:700}
+.gt.o{fill:#b8620f;font-weight:700}
+.gd{stroke:var(--ink);stroke-width:1}
+.gd.o{stroke:#b8620f}
 </style>
 </head>
 <body>
@@ -161,6 +170,14 @@ td input.wi.ov{color:var(--or);font-weight:700;border-color:var(--or)}
     <button id="mAuto">最大本数で自動</button>
     <button id="mCount">本数を指定</button>
   </div>
+  <details class="guide" open>
+    <summary>用語の図解（このアプリでの定義）</summary>
+    <div class="gcap">断面図（畝を横から切った形）</div>
+    <svg id="gSec" viewBox="0 0 370 150" role="img" aria-label="区画の断面図"></svg>
+    <div class="gcap">平面図（区画を上から見た形）</div>
+    <svg id="gPlan" viewBox="0 0 360 192" role="img" aria-label="区画の平面図"></svg>
+    <p class="note" style="margin-top:2px">図は模式図で、縮尺は実際と異なります。数値は今の設定値です。</p>
+  </details>
   <div class="grid">
     <label>畝数（本）<input id="pCount" type="number" inputmode="numeric" min="1" step="1"></label>
     <label>畝幅（m）<input id="pBed" type="number" inputmode="decimal" step="0.05" min="0.1"></label>
@@ -413,9 +430,47 @@ const FieldMap = (() => {
     if (scroll && trs[i]) trs[i].scrollIntoView({block:'nearest'});
   }
 
+  /* ---------- 用語の図解 ---------- */
+  function drawGuide(){
+    const p = plot(), P = p.params, r = results[p.id], cnt = P.mode === 'count';
+    const pathV = cnt && r ? r.path : (+P.path || 0), bedV = +P.bed || 0;
+    const m = v => r2(+v || 0) + 'm';
+    const bed = m(bedV), path = m(pathV), side = m(P.side), head = m(P.head);
+    const pathName = cnt ? '通路(自動)' : '通路';
+    const T = (x, y, t, c = '', a = 'middle') => `<text class="gt ${c}" x="${x}" y="${y}" text-anchor="${a}">${t}</text>`;
+    const tick = (x1, y1, x2, y2, o) => `<line class="gd${o ? ' o' : ''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+    const hd = (x1, x2, y, name, val, o) => tick(x1,y,x2,y,o) + tick(x1,y-4,x1,y+4,o) + tick(x2,y-4,x2,y+4,o)
+      + T((x1+x2)/2, y+14, name) + (val ? T((x1+x2)/2, y+27, val, 'v') : '');
+    const vd = (x, y1, y2, label) => tick(x,y1,x,y2) + tick(x-4,y1,x+4,y1) + tick(x-4,y2,x+4,y2) + T(x-6, (y1+y2)/2 + 3, label, '', 'end');
+    const dash = (x1, y1, x2, y2, c) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+
+    // 断面図
+    let s = dash(10,14,10,92,'#e8892b') + dash(360,14,360,92,'#e8892b')
+      + T(13,11,'区画の辺','o','start') + T(357,11,'区画の辺','o','end')
+      + `<rect x="10" y="92" width="350" height="7" fill="#e6d5bf"/><line x1="10" y1="92" x2="360" y2="92" stroke="#8a6a4a" stroke-width="2"/>`;
+    [[32,102],[150,220],[268,338]].forEach(([a,b]) => {
+      s += `<polygon points="${a},92 ${a+10},58 ${b-10},58 ${b},92" fill="#c9a27a" stroke="#8a6a4a"/><circle cx="${(a+b)/2}" cy="52" r="5" fill="#3fa45b"/>`;
+    });
+    s += dash(67,44,67,47,'#b8620f') + dash(185,44,185,47,'#b8620f')
+      + tick(67,44,185,44,true) + tick(67,40,67,48,true) + tick(185,40,185,48,true)
+      + T(126,36,`ピッチ（中心〜中心）${m(bedV + pathV)}`,'o');
+    s += hd(10,32,108,'余白',side) + hd(32,102,108,'畝幅',bed) + hd(102,150,108,pathName,path)
+      + hd(150,220,108,'畝幅',bed) + hd(220,268,108,pathName,path) + hd(268,338,108,'畝幅',bed) + hd(338,360,108,'余白',side);
+    $('gSec').innerHTML = s;
+
+    // 平面図
+    let g = `<rect x="80" y="20" width="270" height="130" fill="#f6efe2" stroke="#e8892b" stroke-width="2"/>`;
+    [32,62,92,122].forEach(y => { g += `<rect x="106" y="${y}" width="218" height="16" rx="3" fill="#3fa45b" fill-opacity=".75"/>`; });
+    g += dash(106,20,106,150,'#6b766e') + dash(324,20,324,150,'#6b766e');
+    g += hd(80,106,160,'枕地',head) + hd(106,324,160,'畝の長さ（一覧の「長さ」）','区画の形から自動計算') + hd(324,350,160,'枕地',head);
+    g += vd(72,20,32,`余白 ${side}`) + vd(72,32,48,`畝幅 ${bed}`) + vd(72,48,62,`通路 ${path}`);
+    $('gPlan').innerHTML = g;
+  }
+
   /* ---------- パネル ---------- */
   function panel(light){
     const f = fld(), p = plot(), P = p.params, r = results[p.id];
+    drawGuide();
 
     // 圃場合計
     let fa = 0, fb = 0, any = false;
