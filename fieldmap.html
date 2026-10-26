@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>圃場マップ</title>
+<!--
+  AGRIBA 圃場マップ（単独試作版）
+  ・地図: 国土地理院タイル（APIキー不要・無料）
+  ・地図ライブラリ: Leaflet 1.9.4（この画面を開いたときだけ読み込む想定）
+  ・保存: localStorage キー "agriba_fieldmap_v1"
+  ・AGRIBA組み込み時: 下の FieldMap モジュールを圃場情報（マイページ）から呼び出し、
+    exportData() の形式（圃場名・面積・頂点・畝リスト）を圃場/区画/畝に取り込む想定
+-->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --g:#2f5d3a; --g2:#e7efe3; --cream:#f7f1e3; --or:#e8892b; --ink:#24302a; --mut:#6b766e;
+  --line:#d9dccf; --white:#fff; --bed:#3fa45b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--cream);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:15px}
+header{background:var(--g);color:#fff;display:flex;align-items:center;gap:10px;
+  padding:calc(env(safe-area-inset-top) + 10px) 14px 10px}
+header h1{font-size:18px;margin:0;flex:1;font-weight:700}
+.wrap{max-width:900px;margin:0 auto}
+#mapBox{position:relative}
+#map{height:52vh;min-height:300px;background:#cfd8c8}
+.hint{position:absolute;left:10px;right:10px;top:10px;z-index:500;background:rgba(36,48,42,.85);color:#fff;
+  border-radius:12px;padding:8px 12px;font-size:13px;display:none}
+.hint.on{display:block}
+.search{display:flex;gap:8px;padding:10px 12px;background:var(--g)}
+.search input{flex:1}
+input,select{font-size:16px;height:38px;border:1px solid var(--line);border-radius:10px;padding:0 10px;
+  background:#fff;color:var(--ink);min-width:0}
+input::placeholder{color:#a6aca4}
+.btn{height:38px;border:none;border-radius:19px;padding:0 14px;font-size:14px;font-weight:600;
+  background:var(--g2);color:var(--g);cursor:pointer;white-space:nowrap}
+.btn.or{background:var(--or);color:#fff}
+.btn.w{background:#fff;color:var(--g);border:1px solid var(--line)}
+.btn.on{outline:2px solid var(--or)}
+.rb{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--g);
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0}
+.rb.or{background:var(--or);color:#fff;border:none}
+.rb svg{width:18px;height:18px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;margin:12px;padding:12px}
+.card h2{font-size:15px;margin:0 0 10px;color:var(--g);display:flex;align-items:center;gap:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row select{flex:1}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mut)}
+.grid input{width:100%}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat{background:var(--cream);border-radius:12px;padding:8px 10px}
+.stat b{display:block;font-size:18px;color:var(--ink)}
+.stat span{font-size:12px;color:var(--mut)}
+.dir{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.dir input[type=range]{flex:1;height:auto;border:none;padding:0;accent-color:var(--g)}
+.dir .val{width:64px;text-align:right}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px}
+.chk input{width:18px;height:18px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{background:var(--g2);color:var(--g);font-weight:600;position:sticky;top:0}
+tbody tr{cursor:pointer;background:var(--cream)}
+tbody tr.hi{background:#fde3c8}
+tfoot td{font-weight:700;background:#fff}
+.tblBox{max-height:50vh;overflow:auto;border-radius:10px;border:1px solid var(--line)}
+.empty{color:var(--mut);font-size:13px;padding:6px 2px}
+.vtx{background:#fff;border:3px solid var(--or);border-radius:50%}
+.vtx.first{border-color:#d33;width:22px!important;height:22px!important;margin:-11px 0 0 -11px!important}
+.note{font-size:12px;color:var(--mut);margin:8px 2px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>圃場マップ</h1>
+  <button class="rb" id="btnLoc" title="現在地" aria-label="現在地">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+  </button>
+</header>
+<div class="search">
+  <input id="q" placeholder="住所・地名で検索（例: 茨木市 ○○）" enterkeyhint="search">
+  <button class="btn or" id="btnQ">検索</button>
+</div>
+<div id="mapBox">
+  <div id="map"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div class="card">
+  <h2>圃場</h2>
+  <div class="row">
+    <select id="fieldSel"></select>
+    <button class="rb or" id="btnAdd" title="圃場を追加" aria-label="圃場を追加">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button class="rb" id="btnRen" title="名前を変更" aria-label="名前を変更">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
+    </button>
+    <button class="rb" id="btnDel" title="削除" aria-label="削除">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+    </button>
+  </div>
+  <div class="tools">
+    <button class="btn or" id="btnDraw">圃場を囲む</button>
+    <button class="btn w" id="btnUndo">1つ戻す</button>
+    <button class="btn w" id="btnDone">完了</button>
+    <button class="btn w" id="btnFit">全体を表示</button>
+  </div>
+  <div class="stats" style="margin-top:12px">
+    <div class="stat"><span>圃場面積</span><b id="sArea">-</b></div>
+    <div class="stat"><span>アール換算</span><b id="sA">-</b></div>
+    <div class="stat"><span>外周</span><b id="sPer">-</b></div>
+    <div class="stat"><span>頂点数</span><b id="sPts">-</b></div>
+  </div>
+  <p class="note">角の点はドラッグで微調整できます。航空写真からの計測のため、数％程度の誤差があります。</p>
+</div>
+
+<div class="card">
+  <h2>畝の設定</h2>
+  <div class="grid">
+    <label>畝幅（m）<input id="pBed" type="number" inputmode="decimal" step="0.05" min="0.1"></label>
+    <label>通路幅（m）<input id="pPath" type="number" inputmode="decimal" step="0.05" min="0"></label>
+    <label>枕地・両端の余白（m）<input id="pHead" type="number" inputmode="decimal" step="0.1" min="0"></label>
+    <label>外周の余白（m）<input id="pSide" type="number" inputmode="decimal" step="0.1" min="0"></label>
+    <label>最短の畝長（m）<input id="pMin" type="number" inputmode="decimal" step="0.5" min="0"></label>
+    <label>畝名の頭（例: A）<input id="pPre" type="text" maxlength="6"></label>
+  </div>
+  <div class="dir">
+    <span style="font-size:13px;color:var(--mut)">畝の向き</span>
+    <input type="range" id="pDir" min="0" max="179" step="1">
+    <input class="val" id="pDirN" type="number" inputmode="numeric" min="0" max="179">°
+  </div>
+  <div class="dir">
+    <label class="chk"><input type="checkbox" id="pAuto">一番長い辺に合わせる</label>
+    <button class="btn w" id="btn90">90°回す</button>
+  </div>
+  <p class="note">向きは北を0°、東西方向が90°です。</p>
+</div>
+
+<div class="card">
+  <h2>畝の一覧</h2>
+  <div class="stats" style="margin-bottom:10px">
+    <div class="stat"><span>畝の本数</span><b id="sN">-</b></div>
+    <div class="stat"><span>畝の総延長</span><b id="sLen">-</b></div>
+    <div class="stat"><span>畝の合計面積</span><b id="sBA">-</b></div>
+    <div class="stat"><span>作付率（畝÷圃場）</span><b id="sRate">-</b></div>
+  </div>
+  <div id="tblWrap"></div>
+  <div class="tools">
+    <button class="btn w" id="btnCsv">CSVで保存</button>
+    <button class="btn w" id="btnJson">AGRIBA連携用データ</button>
+  </div>
+</div>
+</div>
+
+<script>
+const FieldMap = (() => {
+  const KEY = 'agriba_fieldmap_v1';
+  const R = 6378137, D = Math.PI / 180;
+  const $ = id => document.getElementById(id);
+  const f1 = v => (Math.round(v * 10) / 10).toLocaleString('ja-JP', {minimumFractionDigits:1, maximumFractionDigits:1});
+
+  /* ---------- データ ---------- */
+  let S = load();
+  function load(){
+    try{ const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.fields)) return s; }catch(e){}
+    return {fields:[], cur:null, view:null};
+  }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+  const defParams = () => ({bed:0.9, path:0.5, head:0.5, side:0.3, minLen:1, dir:0, auto:true});
+  function newField(name){
+    const f = {id:'f'+Date.now(), name, prefix:String.fromCharCode(65 + S.fields.length % 26), pts:[], params:defParams()};
+    S.fields.push(f); S.cur = f.id; save(); return f;
+  }
+  const cur = () => S.fields.find(f => f.id === S.cur);
+  if (!S.fields.length) newField('A圃場');
+  if (!cur()) S.cur = S.fields[0].id;
+
+  /* ---------- 計算 ---------- */
+  function proj(pts){
+    const lat0 = pts.reduce((a,p)=>a+p[0],0)/pts.length, lng0 = pts.reduce((a,p)=>a+p[1],0)/pts.length;
+    const k = Math.cos(lat0*D);
+    return {lat0, lng0, k, xy: pts.map(p => [(p[1]-lng0)*D*R*k, (p[0]-lat0)*D*R])};
+  }
+  const unproj = (o,x,y) => [o.lat0 + y/(R*D), o.lng0 + x/(R*D*o.k)];
+  function polyArea(xy){ let s=0; for(let i=0;i<xy.length;i++){const a=xy[i],b=xy[(i+1)%xy.length]; s+=a[0]*b[1]-b[0]*a[1];} return Math.abs(s)/2; }
+  function perim(xy){ let s=0; for(let i=0;i<xy.length;i++){const a=xy[i],b=xy[(i+1)%xy.length]; s+=Math.hypot(b[0]-a[0],b[1]-a[1]);} return s; }
+  function longestBearing(xy){
+    let best=0, br=0;
+    for(let i=0;i<xy.length;i++){const a=xy[i],b=xy[(i+1)%xy.length],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy);
+      if(L>best){best=L; br=Math.atan2(dx,dy)/D;}}
+    return Math.round(((br%180)+180)%180) % 180;
+  }
+  const rot = (p,a) => [p[0]*Math.cos(a)-p[1]*Math.sin(a), p[0]*Math.sin(a)+p[1]*Math.cos(a)];
+  function spans(poly, y){
+    const xs=[];
+    for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length];
+      if((a[1]<=y&&b[1]>y)||(b[1]<=y&&a[1]>y)) xs.push(a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]));}
+    xs.sort((m,n)=>m-n); const out=[]; for(let i=0;i+1<xs.length;i+=2) out.push([xs[i],xs[i+1]]); return out;
+  }
+  function inter(A,B){ const o=[]; for(const a of A) for(const b of B){const l=Math.max(a[0],b[0]), r=Math.min(a[1],b[1]); if(r>l) o.push([l,r]);} return o; }
+
+  // 畝の自動配置：畝方向をx軸に回転 → 帯ごとに圃場内に収まる区間を求める
+  function layout(f){
+    const o = proj(f.pts), p = f.params;
+    const bearing = p.auto ? longestBearing(o.xy) : p.dir;
+    const a = (90 - bearing) * D;
+    const poly = o.xy.map(q => rot(q, -a));
+    const ys = poly.map(q => q[1]), minY = Math.min(...ys), maxY = Math.max(...ys), H = maxY - minY;
+    const bed = Math.max(0.05, +p.bed||0), path = Math.max(0, +p.path||0), pitch = bed + path;
+    const side = Math.max(0, +p.side||0), head = Math.max(0, +p.head||0), minLen = Math.max(0, +p.minLen||0);
+    const n = Math.floor((H - 2*side + path) / pitch + 1e-9);
+    const beds = [];
+    if (n > 0){
+      let y = minY + (H - (n*pitch - path)) / 2;
+      for(let i=0;i<n;i++, y+=pitch){
+        const y0=y, y1=y+bed, e=1e-6;
+        let iv = inter(spans(poly,y0+e), spans(poly,y1-e));
+        for(const vy of ys) if(vy>y0+e && vy<y1-e) iv = inter(iv, spans(poly,vy));
+        for(const [l,r] of iv){
+          const x0=l+head, x1=r-head;
+          if (x1-x0 >= Math.max(minLen, 0.1)) beds.push({x0,x1,y0,y1});
+        }
+      }
+    }
+    beds.sort((m,n2)=> m.y0-n2.y0 || m.x0-n2.x0);
+    const pre = (f.prefix||'').trim() || 'A';
+    const list = beds.map((b,i) => {
+      const len = b.x1 - b.x0;
+      const corners = [[b.x0,b.y0],[b.x1,b.y0],[b.x1,b.y1],[b.x0,b.y1]].map(q => { const r2 = rot(q,a); return unproj(o, r2[0], r2[1]); });
+      return {name:`${pre}-${i+1}`, length:len, area:len*bed, corners};
+    });
+    return {area:polyArea(o.xy), perim:perim(o.xy), bearing, beds:list};
+  }
+
+  /* ---------- 地図 ---------- */
+  const v = S.view || {c:[34.816,135.569], z:16};
+  const map = L.map('map', {zoomControl:false}).setView(v.c, v.z);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+  const attr = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>';
+  const photo = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', {maxNativeZoom:18, maxZoom:21, attribution:attr}).addTo(map);
+  const pale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {maxNativeZoom:18, maxZoom:21, attribution:attr});
+  L.control.layers({'航空写真':photo, '地図':pale}, null, {position:'topright'}).addTo(map);
+  const gField = L.layerGroup().addTo(map), gBeds = L.layerGroup().addTo(map), gVtx = L.layerGroup().addTo(map);
+  map.on('moveend', () => { S.view = {c:[map.getCenter().lat, map.getCenter().lng], z:map.getZoom()}; save(); });
+
+  let drawing = false, hiIdx = -1, bedLayers = [], result = null;
+
+  function hint(t){ const h=$('hint'); h.textContent=t||''; h.classList.toggle('on', !!t); }
+  function setDrawing(on){
+    drawing = on; $('btnDraw').classList.toggle('on', on);
+    hint(on ? '地図をタップして角を追加（最初の赤い点をタップで完了）' : '');
+    renderVtx(); render();
+  }
+
+  map.on('click', e => {
+    if (!drawing) return;
+    cur().pts.push([e.latlng.lat, e.latlng.lng]); save(); renderVtx(); render();
+  });
+
+  function renderVtx(){
+    gVtx.clearLayers();
+    const f = cur();
+    f.pts.forEach((p,i) => {
+      const m = L.marker(p, {draggable:true, icon:L.divIcon({className:'vtx'+(i===0&&drawing?' first':''), iconSize:[18,18]})});
+      m.on('drag', e => { f.pts[i] = [e.latlng.lat, e.latlng.lng]; render(true); });
+      m.on('dragend', () => { save(); render(); });
+      m.on('click', () => { if (drawing && i===0 && f.pts.length>=3) setDrawing(false); });
+      gVtx.addLayer(m);
+    });
+  }
+
+  function render(light){
+    const f = cur();
+    gField.clearLayers(); gBeds.clearLayers(); bedLayers = [];
+    if (f.pts.length >= 2){
+      const style = {color:'#e8892b', weight:3, fillOpacity:0.08, fillColor:'#e8892b'};
+      gField.addLayer(f.pts.length>=3 ? L.polygon(f.pts, style) : L.polyline(f.pts, style));
+    }
+    result = f.pts.length >= 3 ? layout(f) : null;
+    if (result && !drawing){
+      result.beds.forEach((b,i) => {
+        const pl = L.polygon(b.corners, {color:'#1f6b35', weight:1, fillColor:'#3fa45b', fillOpacity:0.55});
+        pl.bindTooltip(`${b.name}　${f1(b.length)}m／${f1(b.area)}㎡`, {sticky:true});
+        pl.on('click', () => highlight(i, true));
+        gBeds.addLayer(pl); bedLayers.push(pl);
+      });
+    }
+    panel(light);
+  }
+
+  function highlight(i, scroll){
+    if (hiIdx>=0 && bedLayers[hiIdx]) bedLayers[hiIdx].setStyle({fillColor:'#3fa45b', color:'#1f6b35'});
+    hiIdx = i;
+    if (bedLayers[i]) bedLayers[i].setStyle({fillColor:'#e8892b', color:'#a85a10'});
+    document.querySelectorAll('#tblWrap tbody tr').forEach((tr,k) => tr.classList.toggle('hi', k===i));
+    if (scroll){ const tr = document.querySelectorAll('#tblWrap tbody tr')[i]; if (tr) tr.scrollIntoView({block:'nearest'}); }
+  }
+
+  /* ---------- パネル ---------- */
+  function panel(light){
+    const f = cur();
+    $('sPts').textContent = f.pts.length ? f.pts.length + '点' : '-';
+    if (result){
+      $('sArea').textContent = f1(result.area) + '㎡';
+      $('sA').textContent = f1(result.area/100) + 'a';
+      $('sPer').textContent = f1(result.perim) + 'm';
+    } else { $('sArea').textContent = $('sA').textContent = $('sPer').textContent = '-'; }
+
+    if (f.params.auto && result){ $('pDir').value = result.bearing; $('pDirN').value = result.bearing; }
+    if (light) return;
+
+    const beds = (result && !drawing) ? result.beds : [];
+    const tl = beds.reduce((a,b)=>a+b.length,0), ta = beds.reduce((a,b)=>a+b.area,0);
+    $('sN').textContent = beds.length ? beds.length + '本' : '-';
+    $('sLen').textContent = beds.length ? f1(tl) + 'm' : '-';
+    $('sBA').textContent = beds.length ? f1(ta) + '㎡' : '-';
+    $('sRate').textContent = beds.length ? f1(ta/result.area*100) + '%' : '-';
+    if (!beds.length){
+      $('tblWrap').innerHTML = `<div class="empty">${f.pts.length<3 ? '「圃場を囲む」で圃場の角を3点以上タップしてください。' : drawing ? '「完了」を押すと畝を配置します。' : '畝が入りません。畝幅や余白を見直してください。'}</div>`;
+      return;
+    }
+    $('tblWrap').innerHTML = `<div class="tblBox"><table><thead><tr><th>畝名</th><th>長さ(m)</th><th>面積(㎡)</th></tr></thead><tbody>${
+      beds.map(b=>`<tr><td>${b.name}</td><td>${f1(b.length)}</td><td>${f1(b.area)}</td></tr>`).join('')
+    }</tbody><tfoot><tr><td>合計 ${beds.length}本</td><td>${f1(tl)}</td><td>${f1(ta)}</td></tr></tfoot></table></div>`;
+    document.querySelectorAll('#tblWrap tbody tr').forEach((tr,i) => tr.onclick = () => {
+      highlight(i); map.panTo(bedLayers[i].getBounds().getCenter());
+    });
+    hiIdx = -1;
+  }
+
+  function fillForm(){
+    const f = cur(), p = f.params;
+    $('fieldSel').innerHTML = S.fields.map(x => `<option value="${x.id}" ${x.id===S.cur?'selected':''}>${esc(x.name)}</option>`).join('');
+    $('pBed').value = p.bed; $('pPath').value = p.path; $('pHead').value = p.head; $('pSide').value = p.side;
+    $('pMin').value = p.minLen; $('pPre').value = f.prefix; $('pAuto').checked = p.auto;
+    $('pDir').value = p.dir; $('pDirN').value = p.dir;
+  }
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  function fit(){ const f = cur(); if (f.pts.length>=2) map.fitBounds(L.latLngBounds(f.pts), {padding:[30,30], maxZoom:20}); }
+  function switchTo(id){ S.cur = id; save(); drawing=false; hint(''); $('btnDraw').classList.remove('on'); fillForm(); renderVtx(); render(); fit(); }
+
+  /* ---------- 操作 ---------- */
+  $('fieldSel').onchange = e => switchTo(e.target.value);
+  $('btnAdd').onclick = () => { const n = prompt('圃場名', String.fromCharCode(65 + S.fields.length % 26) + '圃場'); if (n) { const f = newField(n.trim()); switchTo(f.id); setDrawing(true); } };
+  $('btnRen').onclick = () => { const f = cur(); const n = prompt('圃場名を変更', f.name); if (n){ f.name = n.trim(); save(); fillForm(); } };
+  $('btnDel').onclick = () => {
+    const f = cur(); if (!confirm(`「${f.name}」を削除しますか？`)) return;
+    S.fields = S.fields.filter(x => x.id !== f.id); if (!S.fields.length) newField('A圃場');
+    switchTo(S.fields[0].id);
+  };
+  $('btnDraw').onclick = () => {
+    const f = cur();
+    if (drawing){ setDrawing(false); return; }
+    if (f.pts.length && !confirm('今の形を消して囲み直しますか？')) return;
+    f.pts = []; save(); setDrawing(true);
+  };
+  $('btnUndo').onclick = () => { cur().pts.pop(); save(); renderVtx(); render(); };
+  $('btnDone').onclick = () => { if (cur().pts.length < 3) { alert('角を3点以上タップしてください'); return; } setDrawing(false); };
+  $('btnFit').onclick = fit;
+
+  const num = (id, key) => $(id).addEventListener('input', () => { const val = parseFloat($(id).value); if (!isNaN(val)) { cur().params[key] = val; save(); render(); } });
+  num('pBed','bed'); num('pPath','path'); num('pHead','head'); num('pSide','side'); num('pMin','minLen');
+  $('pPre').addEventListener('input', () => { cur().prefix = $('pPre').value; save(); render(); });
+  const setDir = d => { const p = cur().params; p.dir = ((Math.round(d)%180)+180)%180; p.auto = false; $('pAuto').checked = false; $('pDir').value = p.dir; $('pDirN').value = p.dir; save(); render(); };
+  $('pDir').addEventListener('input', () => setDir(+$('pDir').value));
+  $('pDirN').addEventListener('change', () => setDir(+$('pDirN').value || 0));
+  $('pAuto').addEventListener('change', () => { const p = cur().params; p.auto = $('pAuto').checked; if (!p.auto && result) p.dir = result.bearing; save(); render(); });
+  $('btn90').onclick = () => setDir((result ? result.bearing : cur().params.dir) + 90);
+
+  $('btnLoc').onclick = () => {
+    if (!navigator.geolocation) return alert('位置情報が使えません');
+    navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 18), () => alert('現在地を取得できませんでした'), {enableHighAccuracy:true, timeout:10000});
+  };
+  async function search(){
+    const q = $('q').value.trim(); if (!q) return;
+    try{
+      const r = await fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q));
+      const j = await r.json();
+      if (!j.length) return alert('見つかりませんでした');
+      const [lng, lat] = j[0].geometry.coordinates; map.setView([lat, lng], 18); $('q').blur();
+    }catch(e){ alert('検索できませんでした（通信を確認してください）'); }
+  }
+  $('btnQ').onclick = search;
+  $('q').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+
+  /* ---------- 書き出し（AGRIBA連携用） ---------- */
+  function exportData(f){
+    const r = f.pts.length>=3 ? layout(f) : null;
+    return {
+      format:'agriba-fieldmap/1', name:f.name, prefix:f.prefix, area_m2:r?+r.area.toFixed(1):0,
+      vertices:f.pts, params:{...f.params, bearing:r?r.bearing:f.params.dir},
+      beds:r ? r.beds.map(b => ({name:b.name, length_m:+b.length.toFixed(1), area_m2:+b.area.toFixed(1)})) : []
+    };
+  }
+  function download(name, text, type){
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+  $('btnCsv').onclick = () => {
+    const d = exportData(cur());
+    const rows = [['畝名','長さ(m)','面積(㎡)'], ...d.beds.map(b=>[b.name,b.length_m,b.area_m2])];
+    rows.push([], ['圃場面積(㎡)', d.area_m2], ['畝幅(m)', d.params.bed], ['通路幅(m)', d.params.path], ['畝の向き(°)', d.params.bearing]);
+    download(`${d.name}_畝一覧.csv`, '\ufeff' + rows.map(r=>r.join(',')).join('\n'), 'text/csv');
+  };
+  $('btnJson').onclick = () => { const d = exportData(cur()); download(`${d.name}_fieldmap.json`, JSON.stringify(d, null, 2), 'application/json'); };
+
+  fillForm(); renderVtx(); render(); fit();
+  return {exportData, layout, getState:() => S};
+})();
+</script>
+</body>
+</html>
