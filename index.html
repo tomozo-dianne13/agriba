@@ -2047,11 +2047,11 @@ function ysummary(L){
   .map(([a,b],i)=>`<div class="ycard"${i==4?' style="border:2px solid var(--hd)"':""}><small>${a}</small><b>${b}</b></div>`).join("")+
   (L.length?`<div class="hint" style="align-self:center">${np.length?"単価が未設定の農産物（"+np.map(esc).join("、")+"）は、売上に含まれません。":""}${feeSum>0?"売上予測は、販売手数料"+feeRate()+"%（合計 約"+fmtYen(feeSum)+"）を引いた手取りです。":""}${ne?"予想数量が空の"+ne+"件は、栽培計画設定の農産物リストに収量の目安がない野菜です。":""}</div>`:"");
  const G={},ord=[];
- L.forEach(x=>{const k=x.s.crop,g=G[k]=G[k]||(ord.push(k),{crop:k,real:0,rev:0,fee:0,ret:false,any:false});g.real+=x.c.real||0;g.rev+=x.c.rev||0;g.fee+=x.c.fee||0;if(x.c.ret)g.ret=true;if(x.c.real!=null)g.any=true});
- let h='<thead><tr><th>農産物</th><th class="n">実売収量(kg)</th><th class="n">単価(円/kg)</th><th class="n">販売手数料'+feeRate()+'%</th><th class="n">売上予測<small class="fmh">実売×単価×(1−手数料'+feeRate()+'%)</small></th></tr></thead><tbody>';
- ord.forEach(k=>{const g=G[k],rpk=cropRP(k),pr=rpk!=null?rpk:cropPrice(k);h+=`<tr><td>${esc(g.crop)}</td><td class="n">${g.any?fmtKg(g.real):""}</td><td class="n">${pr==null?"未設定":fmtYen(pr)}</td><td class="n">${g.ret?(g.fee?"−"+fmtYen(g.fee):""):'<small style="opacity:.6">対象外</small>'}</td><td class="n">${g.rev?fmtYen(g.rev):""}</td></tr>`});
- if(!ord.length)h+='<tr><td colspan="5" style="opacity:.6">栽培計画で野菜名を選ぶと、ここに集計されます</td></tr>';
- h+=`</tbody><tfoot><tr><td>合計</td><td class="n">${fmtKg(sm(x=>x.c.real))}</td><td></td><td class="n">${feeSum>0?"−"+fmtYen(feeSum):""}</td><td class="n">${fmtYen(sm(x=>x.c.rev))}</td></tr></tfoot>`;
+ L.forEach(x=>{const k=x.s.crop,g=G[k]=G[k]||(ord.push(k),{crop:k,real:0,m2:0,rev:0,fee:0,ret:false,any:false});g.m2+=ridgeM2(x.g,x.i)||0;g.real+=x.c.real||0;g.rev+=x.c.rev||0;g.fee+=x.c.fee||0;if(x.c.ret)g.ret=true;if(x.c.real!=null)g.any=true});
+ let h='<thead><tr><th>農産物</th><th class="n">実売収量(kg)</th><th class="n">面積(a)</th><th class="n">単価(円/kg)</th><th class="n">販売手数料'+feeRate()+'%</th><th class="n">売上予測<small class="fmh">実売×単価×(1−手数料'+feeRate()+'%)</small></th></tr></thead><tbody>';
+ ord.forEach(k=>{const g=G[k],rpk=cropRP(k),pr=rpk!=null?rpk:cropPrice(k);h+=`<tr><td>${esc(g.crop)}</td><td class="n">${g.any?fmtKg(g.real):""}</td><td class="n">${g.m2>0?(g.m2/100).toFixed(1):""}</td><td class="n">${pr==null?"未設定":fmtYen(pr)}</td><td class="n">${g.ret?(g.fee?"−"+fmtYen(g.fee):""):'<small style="opacity:.6">対象外</small>'}</td><td class="n">${g.rev?fmtYen(g.rev):""}</td></tr>`});
+ if(!ord.length)h+='<tr><td colspan="6" style="opacity:.6">栽培計画で野菜名を選ぶと、ここに集計されます</td></tr>';
+ h+=`</tbody><tfoot><tr><td>合計</td><td class="n">${fmtKg(sm(x=>x.c.real))}</td><td class="n">${L.length?(sm(x=>ridgeM2(x.g,x.i))/100).toFixed(1):""}</td><td></td><td class="n">${feeSum>0?"−"+fmtYen(feeSum):""}</td><td class="n">${fmtYen(sm(x=>x.c.rev))}</td></tr></tfoot>`;
  h+=`<caption class="fmc" style="caption-side:bottom;text-align:left;font-size:12px;opacity:.75;padding:6px 2px">売上予測 ＝ 実売数量 × 単価 ×（1 − 販売手数料${feeRate()}%）。手数料は、小売単価で計算する農産物にだけかかります。卸単価で計算する農産物（対象外）は、手数料を引きません。</caption>`;
  $("yg").innerHTML=h}
 function renderY(){
